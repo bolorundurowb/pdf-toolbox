@@ -9,7 +9,13 @@ users install nothing, stage the qpdf binary + its DLLs here before building:
 Populate it with the helper script (from the project root):
 
 ```powershell
-pwsh scripts/fetch-qpdf.ps1
+# Windows
+pwsh scripts/stage-qpdf-ci.ps1
+```
+
+```bash
+# macOS / Linux
+bash scripts/stage-qpdf-ci.sh
 ```
 
 The app resolves this folder at runtime (Tauri resource dir → `qpdf/`).

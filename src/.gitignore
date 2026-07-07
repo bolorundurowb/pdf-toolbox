@@ -1,0 +1,14 @@
+# Angular frontend source — local-only files
+
+# Environment overrides (secrets, machine-specific config)
+.env
+.env.*
+!.env.example
+
+# Local scratch / manual test files (never commit real user documents)
+scratch/
+*.local.*
+
+# Editor swap files
+*.swp
+*~

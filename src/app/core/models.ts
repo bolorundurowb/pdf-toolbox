@@ -57,7 +57,7 @@ export interface ImagesOptions {
 }
 
 export interface MergeOptions {
-  /** Run a Ghostscript optimization pass on the merged output. */
+  /** Run a pure-Rust compression pass on the merged output. */
   optimize: boolean;
   outputName?: string;
 }

@@ -1,90 +1,146 @@
 # PDF Toolbox
 
-A local, offline desktop app for everyday PDF work. **Tauri 2** (Rust) +
-**Angular 22** with a **Material-3 / Tailwind** design. Everything runs
-on-device; no file leaves the computer.
+[![Build](https://github.com/bolorundurowb/pdf-toolbox/actions/workflows/build.yml/badge.svg)](https://github.com/bolorundurowb/pdf-toolbox/actions/workflows/build.yml)
+
+A local, offline desktop app for everyday PDF work. Built with **Tauri 2** (Rust) and
+**Angular 22** (Material-3 / Tailwind). Everything runs on-device — no file leaves
+your computer.
 
 ## Features
 
 | Page              | What it does                                                                | Engine         |
 |-------------------|-----------------------------------------------------------------------------|----------------|
-| **Dashboard**     | Quick actions + real "Recent Files" from your output folder                 | filesystem     |
+| **Dashboard**     | Quick actions + recent output files from your save folder                   | filesystem     |
 | **Image to PDF**  | Combine JPG/PNG/TIFF/HEIC into one PDF (size, orientation, margin, quality) | lopdf + image  |
 | **Merge / Split** | Merge (drag-reorder) or split by ranges / max file size                     | lopdf          |
 | **Organize**      | Reorder, rotate, and delete pages → new PDF                                 | lopdf          |
-| **Compress**      | Shrink PDFs (Low/Recommended/Extreme, grayscale, strip metadata)            | **pure Rust**  |
+| **Compress**      | Shrink PDFs (Low / Recommended / Extreme, grayscale, strip metadata)        | pure Rust      |
 | **Extract**       | Text → `.txt` (pure Rust); pages → PNG/JPG (pdfium, optional)               | lopdf / pdfium |
 | **Security**      | Add password (AES-256/128, RC4) or remove a known password                  | qpdf           |
 | **Metadata**      | View / edit Title, Author, Subject, Keywords, Creator                       | lopdf          |
 
-## How compression works (no external tool)
-
-Compression is now **pure Rust**. Most of a PDF's size is its raster images, so
-`compress.rs` walks the object table, finds JPEG (DCTDecode) image XObjects,
-downsamples + re-encodes them at a quality driven by the level (optionally to
-grayscale), strips metadata if asked, and flate-compresses content streams — then
-keeps the result only if it's actually smaller. No Ghostscript required. Merge's
-"Optimize output" toggle reuses the same code.
-
 ## Prerequisites
 
-- Node 18+ and npm
-- Rust stable + Tauri 2 system deps: https://tauri.app/start/prerequisites/
+- **Node.js** 18+ and npm
+- **Rust** stable and [Tauri 2 system dependencies](https://v2.tauri.app/start/prerequisites/)
 
-## Run / build
+## Quick start
+
+```bash
+git clone https://github.com/bolorundurowb/pdf-toolbox.git
+cd pdf-toolbox
+npm install
+npm run tauri dev
+```
+
+## Build locally
 
 ```bash
 npm install
-npm run tauri dev
-npm run tauri build
+npm run build          # Angular production build
+npm run tauri build    # Desktop installer / bundle
 ```
 
-## Optional external tools
+Installers and bundles are written under `src-tauri/target/release/bundle/`.
 
-Only two features need a native helper; everything else is pure Rust.
+### Bundle qpdf (Security tool)
 
-- **Security → qpdf.** Add/remove password + AES encryption. Bundled as an app
-  resource; stage it with `pwsh scripts/fetch-qpdf.ps1`, then `npm run tauri build`.
-  Resolution order at runtime: bundled resource → next to the app exe → `PATH` →
-  `Program Files`. If absent, Security shows a friendly message.
-- **Extract → Pages as Images → pdfium (opt-in).** Rasterizing pages has no
-  pure-Rust option, so it's gated behind the `render` cargo feature and is OFF by
-  default. To enable: build with the feature and drop the pdfium library into
-  `src-tauri/resources/pdfium/` (see that folder's README). Without it, "Pages as
-  Images" reports it isn't enabled; text extraction and all other tools work.
+The Security page needs qpdf at runtime. Stage it before a release build:
 
-Ghostscript is **no longer used** (compression is pure Rust); the old
-`fetch-ghostscript.ps1` script is obsolete.
+```powershell
+# Windows
+pwsh scripts/stage-qpdf-ci.ps1
+```
 
-## Architecture
+```bash
+# macOS / Linux
+bash scripts/stage-qpdf-ci.sh
+```
+
+Resolution order at runtime: bundled app resource → next to the app executable →
+`PATH` → standard install location. If qpdf is missing, Security shows a friendly
+message; all other tools still work.
+
+### Optional: page rendering (pdfium)
+
+**Extract → Pages as Images** needs the native pdfium library and the `render` Cargo
+feature (off by default):
+
+```bash
+# place the platform library in src-tauri/resources/pdfium/ (see that README)
+npm run tauri build -- --features render
+```
+
+Prebuilt binaries: [bblanchon/pdfium-binaries](https://github.com/bblanchon/pdfium-binaries/releases).
+
+Without pdfium, text extraction and every other tool work normally.
+
+## How compression works
+
+Compression is **pure Rust** — no Ghostscript. `compress.rs` walks the PDF object
+table, finds JPEG (DCTDecode) image XObjects, downsamples and re-encodes them at a
+quality driven by the chosen level (optionally to grayscale), strips metadata when
+asked, and flate-compresses content streams. The result is kept only if it is
+actually smaller. Merge's **Optimize output** toggle reuses the same code.
+
+## CI / releases
+
+### Build workflow
+
+[`build.yml`](.github/workflows/build.yml) runs on pushes and pull requests to
+`main`/`master`, and can be triggered manually from the Actions tab. It:
+
+1. Builds the Angular frontend on Ubuntu
+2. Compiles the Rust backend on Ubuntu, Windows, and macOS
+
+### Release workflow
+
+[`release.yml`](.github/workflows/release.yml) is **on-demand only**
+(`workflow_dispatch`). From **Actions → Release → Run workflow** you can set:
+
+| Input | Default | Purpose |
+|-------|---------|---------|
+| **tag** | `v<version>` from `tauri.conf.json` | Git tag and GitHub Release name |
+| **draft** | `true` | Keep the release unpublished until you review assets |
+| **prerelease** | `false` | Mark as pre-release |
+| **enable_render** | `false` | Build with the pdfium `render` feature |
+
+The workflow builds for **Windows x64**, **Linux x64**, **macOS Intel**, and
+**macOS Apple Silicon**, stages qpdf on each platform, and uploads installers to a
+new [GitHub Release](https://github.com/bolorundurowb/pdf-toolbox/releases).
+
+**Repository setting:** under **Settings → Actions → General → Workflow permissions**,
+enable **Read and write permissions** so the release action can publish assets.
+
+## Project layout
 
 ```
 src/app/
-  app.component.*   Sidebar + topbar shell
-  app.routes.ts     Hash routing → 8 pages
-  core/             models, pdf.service (Tauri invoke), runner, nav.config, format
-  shared/           process-status panel (processing / done / error)
-  pages/            dashboard, images, merge-split, organize, compress, extract, security, metadata
-src-tauri/src/pdf/
-  inspect, images, merge, split, organize, compress (pure-Rust), extract (text),
-  render (pdfium, feature-gated), security (qpdf), metadata, recents, heic, model, util
+  app.component.*     Shell (sidebar + top bar)
+  app.routes.ts       Hash routing → 8 tool pages
+  core/               models, pdf.service, runner, nav + tool config
+  shared/             process-status panel
+  pages/              dashboard, images, merge-split, organize, compress,
+                      extract, security, metadata
+scripts/
+  stage-qpdf-ci.ps1   Stage qpdf before build (Windows)
+  stage-qpdf-ci.sh    Stage qpdf before build (macOS / Linux)
+src-tauri/
+  src/pdf/            Rust PDF engines (see feature table above)
+  resources/qpdf/     Bundled qpdf binary (not committed — staged before build)
+  resources/pdfium/   Optional pdfium library for page rendering
 ```
 
-## Status / verification
+## Notes
 
-- ✅ Frontend builds clean (dev + production), fonts/icons bundled offline.
-- ⚠️ Rust was **not compiled in this environment** (no toolchain here). Run
-  `cargo build` in `src-tauri` (add `--features render` for page rendering).
+- **Organize** shows numbered page tiles, not rendered thumbnails (thumbnails would
+  need pdfium).
+- **Split by size** distributes pages evenly into `ceil(fileSize / maxMB)` parts;
+  exact per-part byte sizing would require rendering.
+- Text extraction depends on the PDF — scanned/image-only PDFs have no extractable
+  text (OCR is not bundled).
+- A few unused legacy asset files may remain under `src/assets/`; safe to delete.
 
-## Notes & open questions
+## License
 
-1. **Extract → pages as images** is the one feature needing a native lib (pdfium),
-   kept opt-in to preserve the pure-Rust default. *Open: bundle pdfium by default?*
-2. **Organize** uses numbered page tiles (not rendered thumbnails), since
-   thumbnails would also require pdfium. Reorder/rotate/delete are all real.
-3. **Split by size** distributes pages evenly into `ceil(fileSize / maxMB)` parts
-   (true per-part byte sizing needs rendering).
-4. Text extraction quality depends on the PDF (scanned/image-only PDFs contain no
-   extractable text — those need OCR, not bundled).
-5. A few old, unreferenced Deel-era asset files remain under `src/assets` (the
-   sandbox blocked deleting them); harmless, safe to delete locally.
+[Apache License 2.0](LICENSE)

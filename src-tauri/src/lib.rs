@@ -12,7 +12,7 @@ use pdf::model::{
     Progress, RecentFile, SecurityOptions, SplitOptions,
 };
 
-/// Resolve a bundled external tool folder (e.g. "ghostscript" or "qpdf") to the
+/// Resolve a bundled external tool folder (e.g. "qpdf") to the
 /// first matching executable inside it, if present as an app resource.
 fn bundled_tool(app: &tauri::AppHandle, dir: &str, names: &[&str]) -> Option<String> {
     let base = app.path().resolve(dir, BaseDirectory::Resource).ok()?;

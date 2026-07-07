@@ -1,0 +1,10 @@
+# Build helper scripts — ignore download caches and temp artifacts
+
+.cache/
+downloads/
+staging/
+*.zip
+*.tar.gz
+*.7z
+*.tmp
+*.bak

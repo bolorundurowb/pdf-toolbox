@@ -1,3 +1,6 @@
+# Staged pdfium library — not committed (BSD-3-Clause; see README.md).
+# Optional; only needed when building with the `render` feature.
+
 *
 !.gitignore
 !README.md

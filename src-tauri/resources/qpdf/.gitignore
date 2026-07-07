@@ -1,3 +1,6 @@
+# Staged qpdf binaries — not committed (Apache-2.0; see README.md).
+# Run from project root:  pwsh scripts/stage-qpdf-ci.ps1  (or stage-qpdf-ci.sh)
+
 *
 !.gitignore
 !README.md
