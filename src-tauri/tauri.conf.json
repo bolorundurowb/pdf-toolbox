@@ -40,7 +40,6 @@
       "icons/icon.ico"
     ],
     "resources": {
-      "resources/qpdf": "qpdf",
       "resources/pdfium": "pdfium"
     }
   }

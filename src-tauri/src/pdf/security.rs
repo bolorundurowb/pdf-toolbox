@@ -1,68 +1,91 @@
-//! Password / encryption via the qpdf external tool.
-//!
-//! qpdf is resolved in this order: bundled app resource → next to the app exe →
-//! `PATH` → standard Windows install. If missing, a friendly error is shown.
+//! Password protection via lopdf (pure Rust — no external tools).
 
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::collections::BTreeMap;
+use std::path::Path;
+use std::sync::Arc;
 
+use lopdf::encryption::crypt_filters::{Aes128CryptFilter, Aes256CryptFilter, CryptFilter, Rc4CryptFilter};
+use lopdf::{Document, EncryptionState, EncryptionVersion, Error, LoadOptions, Permissions};
+use rand::Rng;
 use tauri::ipc::Channel;
 
 use super::model::{OperationResult, OutputFile, Progress, SecurityOptions};
 use super::util::{file_size, stem, unique_path};
 
-fn exe_names() -> &'static [&'static str] {
-    if cfg!(target_os = "windows") { &["qpdf.exe"] } else { &["qpdf"] }
+fn default_permissions() -> Permissions {
+    Permissions::PRINTABLE
+        | Permissions::COPYABLE
+        | Permissions::COPYABLE_FOR_ACCESSIBILITY
+        | Permissions::PRINTABLE_IN_HIGH_QUALITY
 }
 
-pub fn resolve(bundled: Option<String>) -> Option<String> {
-    if let Some(p) = bundled {
-        if Path::new(&p).exists() {
-            return Some(p);
+fn build_encryption_state(
+    doc: &Document,
+    strength: &str,
+    user_password: &str,
+    owner_password: &str,
+) -> Result<EncryptionState, String> {
+    let permissions = default_permissions();
+
+    match strength {
+        "aes128" => {
+            let crypt_filter: Arc<dyn CryptFilter> = Arc::new(Aes128CryptFilter);
+            let version = EncryptionVersion::V4 {
+                document: doc,
+                encrypt_metadata: true,
+                crypt_filters: BTreeMap::from([(b"StdCF".to_vec(), crypt_filter)]),
+                stream_filter: b"StdCF".to_vec(),
+                string_filter: b"StdCF".to_vec(),
+                owner_password,
+                user_password,
+                permissions,
+            };
+            EncryptionState::try_from(version).map_err(|e| e.to_string())
+        }
+        "rc4" => {
+            let crypt_filter: Arc<dyn CryptFilter> = Arc::new(Rc4CryptFilter);
+            let version = EncryptionVersion::V4 {
+                document: doc,
+                encrypt_metadata: true,
+                crypt_filters: BTreeMap::from([(b"StdCF".to_vec(), crypt_filter)]),
+                stream_filter: b"StdCF".to_vec(),
+                string_filter: b"StdCF".to_vec(),
+                owner_password,
+                user_password,
+                permissions,
+            };
+            EncryptionState::try_from(version).map_err(|e| e.to_string())
+        }
+        _ => {
+            let crypt_filter: Arc<dyn CryptFilter> = Arc::new(Aes256CryptFilter);
+            let mut file_encryption_key = [0u8; 32];
+            rand::rng().fill(&mut file_encryption_key);
+            let version = EncryptionVersion::V5 {
+                encrypt_metadata: true,
+                crypt_filters: BTreeMap::from([(b"StdCF".to_vec(), crypt_filter)]),
+                file_encryption_key: &file_encryption_key,
+                stream_filter: b"StdCF".to_vec(),
+                string_filter: b"StdCF".to_vec(),
+                owner_password,
+                user_password,
+                permissions,
+            };
+            EncryptionState::try_from(version).map_err(|e| e.to_string())
         }
     }
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(dir) = exe.parent() {
-            for name in exe_names() {
-                let cand = dir.join(name);
-                if cand.exists() {
-                    return Some(cand.to_string_lossy().to_string());
-                }
-            }
-        }
-    }
-    let name = if cfg!(target_os = "windows") { "qpdf.exe" } else { "qpdf" };
-    if Command::new(name).arg("--version").output().is_ok() {
-        return Some(name.to_string());
-    }
-    #[cfg(target_os = "windows")]
-    {
-        for var in ["ProgramW6432", "ProgramFiles", "ProgramFiles(x86)"] {
-            if let Ok(base) = std::env::var(var) {
-                let root = PathBuf::from(base).join("qpdf");
-                if let Ok(entries) = std::fs::read_dir(&root) {
-                    for entry in entries.flatten() {
-                        let cand = entry.path().join("bin").join("qpdf.exe");
-                        if cand.exists() {
-                            return Some(cand.to_string_lossy().to_string());
-                        }
-                    }
-                }
-            }
-        }
-    }
-    None
 }
 
-fn not_found() -> String {
-    "qpdf wasn't found. Reinstall the app or install qpdf (see README).".to_string()
+fn map_crypto_error(err: Error, name: &str) -> String {
+    match err {
+        Error::InvalidPassword => format!("Wrong password for {name}."),
+        other => format!("Couldn't process {name}: {other}"),
+    }
 }
 
 pub fn encrypt_pdfs(
     paths: Vec<String>,
     options: SecurityOptions,
     out_dir: String,
-    qpdf_override: Option<String>,
     on_progress: &Channel<Progress>,
 ) -> Result<OperationResult, String> {
     if paths.is_empty() {
@@ -71,18 +94,12 @@ pub fn encrypt_pdfs(
     if options.user_password.is_empty() {
         return Err("Enter a user password.".to_string());
     }
-    let qpdf = resolve(qpdf_override).ok_or_else(not_found)?;
+
     let owner = options
         .owner_password
-        .clone()
+        .as_deref()
         .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| options.user_password.clone());
-
-    let (bits, use_aes) = match options.strength.as_str() {
-        "aes128" => ("128", true),
-        "rc4" => ("128", false),
-        _ => ("256", true), // aes256
-    };
+        .unwrap_or(&options.user_password);
 
     let total = paths.len() as u32;
     let mut files = Vec::new();
@@ -92,19 +109,15 @@ pub fn encrypt_pdfs(
         let _ = on_progress.send(Progress::new(i as u32, total, format!("Protecting {name}")));
         let out_path = unique_path(Path::new(&out_dir), &name);
 
-        let mut cmd = Command::new(&qpdf);
-        cmd.arg("--encrypt")
-            .arg(&options.user_password)
-            .arg(&owner)
-            .arg(bits);
-        if bits == "128" {
-            cmd.arg(if use_aes { "--use-aes=y" } else { "--use-aes=n" });
+        let mut doc = Document::load(path).map_err(|e| map_crypto_error(e, &name))?;
+        if doc.is_encrypted() {
+            return Err(format!("{name} is already password-protected."));
         }
-        cmd.arg("--")
-            .arg(path)
-            .arg(out_path.to_string_lossy().to_string());
 
-        run(&mut cmd, &name)?;
+        let state = build_encryption_state(&doc, &options.strength, &options.user_password, owner)?;
+        doc.encrypt(&state).map_err(|e| format!("Couldn't protect {name}: {e}"))?;
+        doc.save(&out_path).map_err(|e| format!("Couldn't save {name}: {e}"))?;
+
         files.push(out_file(&out_path, &name));
     }
 
@@ -116,13 +129,11 @@ pub fn decrypt_pdfs(
     paths: Vec<String>,
     password: String,
     out_dir: String,
-    qpdf_override: Option<String>,
     on_progress: &Channel<Progress>,
 ) -> Result<OperationResult, String> {
     if paths.is_empty() {
         return Err("No PDFs to unlock.".to_string());
     }
-    let qpdf = resolve(qpdf_override).ok_or_else(not_found)?;
 
     let total = paths.len() as u32;
     let mut files = Vec::new();
@@ -132,13 +143,14 @@ pub fn decrypt_pdfs(
         let _ = on_progress.send(Progress::new(i as u32, total, format!("Unlocking {name}")));
         let out_path = unique_path(Path::new(&out_dir), &name);
 
-        let mut cmd = Command::new(&qpdf);
-        cmd.arg(format!("--password={password}"))
-            .arg("--decrypt")
-            .arg(path)
-            .arg(out_path.to_string_lossy().to_string());
+        let mut doc = Document::load_with_options(path, LoadOptions::with_password(&password))
+            .map_err(|e| map_crypto_error(e, &name))?;
 
-        run(&mut cmd, &name)?;
+        if doc.is_encrypted() {
+            doc.decrypt(&password).map_err(|e| map_crypto_error(e, &name))?;
+        }
+
+        doc.save(&out_path).map_err(|e| format!("Couldn't save {name}: {e}"))?;
         files.push(out_file(&out_path, &name));
     }
 
@@ -146,25 +158,13 @@ pub fn decrypt_pdfs(
     Ok(OperationResult { files, out_dir })
 }
 
-fn run(cmd: &mut Command, name: &str) -> Result<(), String> {
-    let output = cmd.output().map_err(|e| format!("Couldn't run qpdf: {e}"))?;
-    // qpdf exit code 3 = warnings (still produced output); treat as success.
-    let code = output.status.code().unwrap_or(-1);
-    if code == 0 || code == 3 {
-        return Ok(());
-    }
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let last = stderr.lines().last().unwrap_or("").trim();
-    if last.to_lowercase().contains("password") {
-        Err(format!("Wrong password for {name}."))
-    } else {
-        Err(format!("qpdf failed on {name}. {last}"))
-    }
-}
-
 fn out_file(out_path: &Path, name: &str) -> OutputFile {
     OutputFile {
-        name: out_path.file_name().and_then(|s| s.to_str()).unwrap_or(name).to_string(),
+        name: out_path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or(name)
+            .to_string(),
         path: out_path.to_string_lossy().to_string(),
         size: file_size(out_path),
         badge: None,

@@ -1,6 +1,6 @@
 # PDF Toolbox — root ignore rules
-# Per-directory rules also live in: src/, scripts/, src-tauri/, and
-# src-tauri/resources/{qpdf,pdfium}/
+# Per-directory rules also live in: src/, src-tauri/, and
+# src-tauri/resources/pdfium/
 
 # --- Dependencies ---
 /node_modules/

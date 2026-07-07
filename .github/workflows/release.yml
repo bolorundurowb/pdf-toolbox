@@ -79,15 +79,6 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Stage qpdf (Windows)
-        if: matrix.platform == 'windows-latest'
-        shell: pwsh
-        run: ./scripts/stage-qpdf-ci.ps1
-
-      - name: Stage qpdf (Unix)
-        if: matrix.platform != 'windows-latest'
-        run: bash ./scripts/stage-qpdf-ci.sh
-
       - name: Build and publish release
         uses: tauri-apps/tauri-action@v1
         env:
@@ -100,8 +91,8 @@ jobs:
 
             **Platforms:** Windows (x64), Linux (x64), macOS (Intel + Apple Silicon)
 
-            The Security tool ships with qpdf bundled. Page-to-image export requires
-            building with the `render` feature and a pdfium library (not included by default).
+            Page-to-image export requires building with the `render` feature and a
+            pdfium library (not included by default). All other tools are pure Rust.
           releaseDraft: ${{ inputs.draft }}
           prerelease: ${{ inputs.prerelease }}
           args: ${{ format('{0}{1}', matrix.args, inputs.enable_render && ' --features render' || '') }}

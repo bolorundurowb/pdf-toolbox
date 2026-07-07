@@ -1,5 +1,5 @@
 //! PDF Toolbox — a local, offline suite: images→PDF, merge/split, compress,
-//! security (qpdf), and metadata.
+//! security, and metadata.
 
 mod pdf;
 
@@ -11,17 +11,6 @@ use pdf::model::{
     CompressOptions, FileInfo, ImagesOptions, MergeOptions, OperationResult, PageOp, PdfMetadata,
     Progress, RecentFile, SecurityOptions, SplitOptions,
 };
-
-/// Resolve a bundled external tool folder (e.g. "qpdf") to the
-/// first matching executable inside it, if present as an app resource.
-fn bundled_tool(app: &tauri::AppHandle, dir: &str, names: &[&str]) -> Option<String> {
-    let base = app.path().resolve(dir, BaseDirectory::Resource).ok()?;
-    names
-        .iter()
-        .map(|n| base.join(n))
-        .find(|p| p.exists())
-        .map(|p| p.to_string_lossy().to_string())
-}
 
 #[tauri::command]
 async fn inspect_files(paths: Vec<String>) -> Result<Vec<FileInfo>, String> {
@@ -80,28 +69,24 @@ async fn compress_pdfs(
 
 #[tauri::command]
 async fn encrypt_pdfs(
-    app: tauri::AppHandle,
     paths: Vec<String>,
     options: SecurityOptions,
     out_dir: String,
     on_progress: Channel<Progress>,
 ) -> Result<OperationResult, String> {
-    let qpdf = bundled_tool(&app, "qpdf", &["qpdf.exe", "qpdf"]);
-    tauri::async_runtime::spawn_blocking(move || pdf::security::encrypt_pdfs(paths, options, out_dir, qpdf, &on_progress))
+    tauri::async_runtime::spawn_blocking(move || pdf::security::encrypt_pdfs(paths, options, out_dir, &on_progress))
         .await
         .map_err(|e| format!("Task failed: {e}"))?
 }
 
 #[tauri::command]
 async fn decrypt_pdfs(
-    app: tauri::AppHandle,
     paths: Vec<String>,
     password: String,
     out_dir: String,
     on_progress: Channel<Progress>,
 ) -> Result<OperationResult, String> {
-    let qpdf = bundled_tool(&app, "qpdf", &["qpdf.exe", "qpdf"]);
-    tauri::async_runtime::spawn_blocking(move || pdf::security::decrypt_pdfs(paths, password, out_dir, qpdf, &on_progress))
+    tauri::async_runtime::spawn_blocking(move || pdf::security::decrypt_pdfs(paths, password, out_dir, &on_progress))
         .await
         .map_err(|e| format!("Task failed: {e}"))?
 }

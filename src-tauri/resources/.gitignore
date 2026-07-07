@@ -1,3 +1,2 @@
-# Native tool binaries are staged in child folders before `tauri build`.
-# Each subfolder (qpdf/, pdfium/) has its own .gitignore.
-# Populate qpdf with the scripts in /scripts/ — see each folder's README.
+# Optional native libraries are staged in child folders before `tauri build`.
+# See resources/pdfium/README.md for the optional render feature.
