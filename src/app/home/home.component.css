@@ -1,0 +1,97 @@
+.home {
+  max-width: 880px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 56px 40px 48px;
+}
+
+.home__intro {
+  margin-bottom: 36px;
+}
+
+.home__title {
+  font-size: 40px;
+  line-height: 44px;
+  margin: 0 0 10px;
+}
+
+.home__lede {
+  margin: 0;
+  color: var(--text-secondary);
+  max-width: 520px;
+}
+
+.home__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.tool-card {
+  text-align: left;
+  font-family: var(--font-main);
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+  transition:
+    box-shadow 0.2s var(--ease-standard),
+    border-color 0.2s var(--ease-standard),
+    transform 0.2s var(--ease-standard);
+}
+
+.tool-card:hover {
+  box-shadow: 0 12px 28px rgba(27, 27, 27, 0.1);
+  border-color: var(--grey-250);
+  transform: translateY(-2px);
+}
+
+.tool-card__icon {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tool-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.tool-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tool-card__title {
+  margin: 0;
+  line-height: 24px;
+}
+
+.tool-card__arrow {
+  font-size: 20px;
+  color: var(--grey-400);
+}
+
+.tool-card__desc {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+}
+
+.home__footnote {
+  margin-top: 28px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}

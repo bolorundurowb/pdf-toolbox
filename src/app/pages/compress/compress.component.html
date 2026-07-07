@@ -1,0 +1,103 @@
+@if (runner.stage() === 'idle') {
+  <div class="p-padding-lg max-w-6xl mx-auto w-full space-y-container-gap overflow-y-auto custom-scrollbar h-full">
+    <div>
+      <h2 class="text-display text-on-surface">Compress PDF</h2>
+      <p class="text-body-lg text-on-surface-variant mt-1">Reduce file size while keeping documents readable.</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+      <!-- Compression control -->
+      <div class="lg:col-span-6 bg-surface border border-outline-variant rounded-xl p-6">
+        <div class="flex items-center gap-3 mb-8">
+          <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"><span class="material-symbols-outlined">compress</span></div>
+          <h3 class="text-headline-md">Compression Level</h3>
+        </div>
+        <div class="px-2">
+          <input type="range" min="1" max="3" step="1" [value]="levelIndex()" (input)="levelIndex.set(+$any($event.target).value)"
+                 class="w-full accent-primary h-2 bg-outline-variant rounded-lg appearance-none cursor-pointer" />
+          <div class="flex justify-between mt-4">
+            @for (l of levelLabels; track l.i) {
+              <div class="text-center">
+                <p class="font-label-md" [class.text-primary]="levelIndex()===l.i" [class.font-bold]="levelIndex()===l.i" [class.text-on-surface-variant]="levelIndex()!==l.i">{{ l.name }}</p>
+                <p class="text-[10px] text-outline">{{ l.hint }}</p>
+              </div>
+            }
+          </div>
+        </div>
+        <div class="bg-surface-container rounded-lg p-5 mt-8 flex items-start gap-3">
+          <span class="material-symbols-outlined text-primary">info</span>
+          <p class="text-body-md text-on-surface-variant">{{ levelHint() }} Actual savings are shown after processing.</p>
+        </div>
+        <div class="mt-6 space-y-3">
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" [checked]="grayscale()" (change)="grayscale.set($any($event.target).checked)" class="rounded accent-primary h-5 w-5 border-outline-variant" />
+            <span class="text-body-md text-on-surface-variant">Convert to grayscale (saves more)</span>
+          </label>
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" [checked]="removeMetadata()" (change)="removeMetadata.set($any($event.target).checked)" class="rounded accent-primary h-5 w-5 border-outline-variant" />
+            <span class="text-body-md text-on-surface-variant">Remove metadata</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Files -->
+      <div class="lg:col-span-6 bg-surface border border-outline-variant rounded-xl p-6 flex flex-col">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-headline-md">Files to Compress ({{ files().length }})</h3>
+          <button (click)="addFiles()" class="text-primary hover:bg-primary/5 px-4 py-2 rounded-lg font-label-md transition-colors flex items-center gap-2">
+            <span class="material-symbols-outlined">add</span> Add
+          </button>
+        </div>
+        @if (files().length === 0) {
+          <div (click)="addFiles()" class="flex-1 border-2 border-dashed border-outline-variant rounded-xl flex flex-col items-center justify-center p-10 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors min-h-[220px]">
+            <span class="material-symbols-outlined text-primary" style="font-size:40px;">note_add</span>
+            <p class="text-headline-md mt-3">Add PDFs to compress</p>
+            <p class="text-on-surface-variant text-body-md">or click to browse</p>
+          </div>
+        } @else {
+          <div class="border border-outline-variant rounded-lg overflow-hidden">
+            <table class="w-full text-left">
+              <thead class="bg-surface-container-low border-b border-outline-variant">
+                <tr>
+                  <th class="px-4 py-3 font-label-md text-on-surface-variant">File Name</th>
+                  <th class="px-4 py-3 font-label-md text-on-surface-variant">Size</th>
+                  <th class="px-4 py-3 font-label-md text-on-surface-variant text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-outline-variant">
+                @for (f of files(); track f.path; let i = $index) {
+                  <tr class="hover:bg-surface-container transition-colors">
+                    <td class="px-4 py-3">
+                      <div class="flex items-center gap-3">
+                        <div class="w-8 h-10 bg-error/10 text-error flex items-center justify-center rounded border border-error/20"><span class="material-symbols-outlined" style="font-size:20px;">picture_as_pdf</span></div>
+                        <span class="text-body-md font-medium truncate max-w-[220px]">{{ f.name }}</span>
+                      </div>
+                    </td>
+                    <td class="px-4 py-3 font-mono-sm" [class.text-error]="f.error">{{ f.error || fmtBytes(f.size) }}</td>
+                    <td class="px-4 py-3 text-right"><button (click)="remove(i)" class="text-outline hover:text-error transition-colors p-1"><span class="material-symbols-outlined">delete</span></button></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="flex justify-end items-center gap-6 pb-4">
+      <div class="text-right">
+        <p class="text-label-md text-on-surface-variant">Summary</p>
+        <p class="text-body-md font-bold">{{ summary() }}</p>
+      </div>
+      <button (click)="apply()" [disabled]="!canRun()"
+              class="bg-primary text-on-primary px-10 py-3.5 rounded-lg text-headline-md flex items-center gap-3 shadow-lg shadow-primary/20 hover:brightness-110 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none">
+        <span class="material-symbols-outlined">compress</span> Compress
+      </button>
+    </div>
+  </div>
+} @else {
+  <app-process-status [stage]="runner.stage() === 'processing' ? 'processing' : runner.stage() === 'done' ? 'done' : 'error'"
+    [progress]="runner.progress()" [message]="runner.message()" [result]="runner.result()" [error]="runner.error()"
+    doneTitle="PDFs compressed" icon="compress"
+    (reset)="reset()" (openFolder)="openResultFolder()" (openFile)="pdf.openPath($event)" />
+}

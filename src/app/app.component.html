@@ -1,0 +1,72 @@
+<div class="flex h-screen overflow-hidden bg-background text-on-surface font-body-md">
+  <!-- Sidebar -->
+  <aside class="w-sidebar-width shrink-0 h-screen bg-surface-container-low flex flex-col py-padding-lg border-r border-outline-variant">
+    <div class="px-6 mb-8">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-primary rounded flex items-center justify-center text-on-primary">
+          <span class="material-symbols-outlined fill" style="font-size:20px;">picture_as_pdf</span>
+        </div>
+        <div>
+          <h1 class="text-headline-md font-bold text-primary leading-none">PDF Toolbox</h1>
+          <p class="text-[10px] font-label-md uppercase tracking-wider text-on-surface-variant opacity-70">Utility Suite</p>
+        </div>
+      </div>
+    </div>
+
+    <nav class="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+      @for (item of nav; track item.route) {
+        <a
+          [routerLink]="item.route"
+          routerLinkActive="nav-active"
+          class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer text-body-md"
+        >
+          <span class="material-symbols-outlined">{{ item.icon }}</span>
+          <span>{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+
+    <div class="mt-auto px-3 pt-6 border-t border-outline-variant space-y-1">
+      <a
+        routerLink="/images"
+        class="w-full bg-primary text-on-primary py-3 rounded-lg font-bold flex items-center justify-center gap-2 mb-2 hover:brightness-110 active:scale-95 transition-all"
+      >
+        <span class="material-symbols-outlined">add</span>
+        <span>Convert PDF</span>
+      </a>
+      <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer text-body-md">
+        <span class="material-symbols-outlined">settings</span>
+        <span>Settings</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="flex-1 flex flex-col min-w-0 bg-surface h-screen overflow-hidden">
+    <header class="h-16 shrink-0 flex justify-between items-center px-padding-lg w-full bg-surface border-b border-outline-variant">
+      <div class="flex items-center gap-8">
+        <div class="relative">
+          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" style="font-size:20px;">search</span>
+          <input
+            class="pl-10 pr-4 py-1.5 bg-surface-container border border-outline-variant rounded-full text-body-md focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all w-64"
+            placeholder="Search files or tools..."
+            type="text"
+          />
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <button
+          (click)="openFile()"
+          class="flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-lg text-primary hover:bg-surface-container transition-colors active:scale-95"
+        >
+          <span class="material-symbols-outlined" style="font-size:20px;">folder_open</span>
+          <span class="font-label-md">Open File</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto custom-scrollbar">
+      <router-outlet />
+    </main>
+  </div>
+</div>

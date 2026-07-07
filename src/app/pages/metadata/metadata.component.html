@@ -1,0 +1,61 @@
+@if (runner.stage() === 'idle') {
+  <div class="p-padding-lg max-w-3xl mx-auto w-full space-y-container-gap overflow-y-auto custom-scrollbar h-full">
+    <div>
+      <h2 class="text-display text-on-surface">Metadata</h2>
+      <p class="text-body-lg text-on-surface-variant mt-1">View and edit a PDF's document properties.</p>
+    </div>
+
+    @if (!file()) {
+      <div (click)="choose()" class="border-2 border-dashed border-outline-variant rounded-xl p-12 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
+        <span class="material-symbols-outlined text-primary" style="font-size:40px;">description</span>
+        <p class="text-headline-md mt-3">Choose a PDF</p>
+        <p class="text-on-surface-variant text-body-md">or click to browse your files</p>
+      </div>
+    } @else {
+      <div class="bg-surface border border-outline-variant rounded-xl overflow-hidden">
+        <div class="px-6 py-4 border-b border-outline-variant flex items-center gap-3">
+          <div class="w-9 h-11 bg-error/10 border border-error/20 rounded flex items-center justify-center text-error"><span class="material-symbols-outlined" style="font-size:20px;">picture_as_pdf</span></div>
+          <div class="flex-1 min-w-0">
+            <p class="font-medium truncate">{{ file()!.name }}</p>
+            <p class="text-label-md text-on-surface-variant font-mono-sm">{{ fmtBytes(file()!.size) }}</p>
+          </div>
+          <button (click)="clearFile()" class="px-4 py-2 border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-container transition-all flex items-center gap-2"><span class="material-symbols-outlined">change_circle</span> Change</button>
+        </div>
+
+        <div class="p-6 space-y-5">
+          @if (loading()) {
+            <p class="text-on-surface-variant text-body-md">Reading metadata…</p>
+          } @else {
+            @for (fld of fields; track fld.key) {
+              <div class="space-y-2">
+                <label class="font-label-md text-on-surface-variant block uppercase tracking-wider">{{ fld.label }}</label>
+                @if (fld.area) {
+                  <textarea rows="2" [value]="meta()[fld.key]" (input)="update(fld.key, $any($event.target).value)" [placeholder]="fld.hint"
+                            class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-body-md"></textarea>
+                } @else {
+                  <input type="text" [value]="meta()[fld.key]" (input)="update(fld.key, $any($event.target).value)" [placeholder]="fld.hint"
+                         class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-body-md" />
+                }
+              </div>
+            }
+            @if (meta().producer) {
+              <div class="text-label-md text-on-surface-variant">Producer: <span class="font-mono-sm">{{ meta().producer }}</span></div>
+            }
+          }
+        </div>
+
+        <div class="px-6 py-4 bg-surface-container-low border-t border-outline-variant flex justify-end">
+          <button (click)="save()" [disabled]="!canRun() || loading()"
+                  class="bg-primary text-on-primary px-8 py-3 rounded-lg font-label-md flex items-center gap-2 shadow-sm hover:brightness-110 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+            <span class="material-symbols-outlined" style="font-size:19px;">save</span> Save metadata
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+} @else {
+  <app-process-status [stage]="runner.stage() === 'processing' ? 'processing' : runner.stage() === 'done' ? 'done' : 'error'"
+    [progress]="runner.progress()" [message]="runner.message()" [result]="runner.result()" [error]="runner.error()"
+    doneTitle="Metadata saved" icon="info"
+    (reset)="reset()" (openFolder)="openResultFolder()" (openFile)="pdf.openPath($event)" />
+}

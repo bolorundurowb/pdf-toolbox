@@ -1,0 +1,106 @@
+@if (runner.stage() === 'idle') {
+  <div class="p-padding-lg max-w-4xl mx-auto w-full space-y-container-gap overflow-y-auto custom-scrollbar h-full">
+    <div>
+      <h2 class="text-display text-on-surface">Security</h2>
+      <p class="text-body-lg text-on-surface-variant mt-1">Protect PDFs with a password, or remove one you know.</p>
+    </div>
+
+    <div class="bg-surface border border-outline-variant rounded-xl p-6">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-lg bg-tertiary-container/20 flex items-center justify-center text-tertiary"><span class="material-symbols-outlined fill">security</span></div>
+        <h3 class="text-headline-md">Protection Settings</h3>
+      </div>
+
+      <div class="flex gap-1 bg-surface-container-low p-1 rounded-lg mb-8">
+        <button (click)="setMode('add')" class="flex-1 py-2 rounded-md font-label-md transition-all"
+                [class.bg-surface]="mode()==='add'" [class.text-primary]="mode()==='add'" [class.shadow-sm]="mode()==='add'" [class.text-on-surface-variant]="mode()!=='add'">Add Password</button>
+        <button (click)="setMode('remove')" class="flex-1 py-2 rounded-md font-label-md transition-all"
+                [class.bg-surface]="mode()==='remove'" [class.text-primary]="mode()==='remove'" [class.shadow-sm]="mode()==='remove'" [class.text-on-surface-variant]="mode()!=='remove'">Remove Password</button>
+      </div>
+
+      @if (mode() === 'add') {
+        <div class="space-y-6 animate-fade-in">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+            <div class="space-y-2">
+              <label class="font-label-md text-on-surface-variant block">User Password</label>
+              <div class="relative">
+                <input [type]="showUser() ? 'text' : 'password'" [value]="userPassword()" (input)="userPassword.set($any($event.target).value)"
+                       placeholder="••••••••" class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+                <span (click)="showUser.set(!showUser())" class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline cursor-pointer hover:text-on-surface">{{ showUser() ? 'visibility_off' : 'visibility' }}</span>
+              </div>
+            </div>
+            <div class="space-y-2">
+              <label class="font-label-md text-on-surface-variant block">Owner Password (optional)</label>
+              <input type="password" [value]="ownerPassword()" (input)="ownerPassword.set($any($event.target).value)"
+                     placeholder="••••••••" class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+            </div>
+          </div>
+          <div class="space-y-2">
+            <label class="font-label-md text-on-surface-variant block">Encryption Strength</label>
+            <select [value]="strength()" (change)="strength.set($any($event.target).value)"
+                    class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer">
+              @for (s of strengths; track s.id) { <option [value]="s.id">{{ s.label }}</option> }
+            </select>
+          </div>
+          <div class="bg-on-tertiary-container/30 p-4 rounded-lg flex items-start gap-3">
+            <span class="material-symbols-outlined text-tertiary">verified_user</span>
+            <p class="text-body-md text-on-secondary-fixed-variant">Encryption is applied locally. Keep your passwords safe — they cannot be recovered.</p>
+          </div>
+        </div>
+      } @else {
+        <div class="space-y-6 animate-fade-in">
+          <div class="space-y-2 max-w-sm">
+            <label class="font-label-md text-on-surface-variant block">Current Password</label>
+            <input type="password" [value]="unlockPassword()" (input)="unlockPassword.set($any($event.target).value)"
+                   placeholder="Password to unlock" class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+          </div>
+          <div class="flex items-center gap-3 px-4 py-3 bg-error-container/30 border border-error/20 rounded-lg">
+            <span class="material-symbols-outlined text-error">warning</span>
+            <p class="text-label-md text-on-error-container">Only unlock files you have the legal right to access.</p>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Files -->
+    <div class="bg-surface border border-outline-variant rounded-xl p-6">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-headline-md">Files to Process ({{ files().length }})</h3>
+        <button (click)="addFiles()" class="text-primary hover:bg-primary/10 px-4 py-2 rounded-lg font-label-md transition-colors flex items-center gap-2"><span class="material-symbols-outlined">add</span> Add</button>
+      </div>
+      @if (files().length === 0) {
+        <div (click)="addFiles()" class="border-2 border-dashed border-outline-variant rounded-xl p-10 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
+          <span class="material-symbols-outlined text-outline" style="font-size:36px;">{{ mode()==='add' ? 'lock' : 'lock_open' }}</span>
+          <p class="text-headline-md mt-2">{{ mode()==='add' ? 'Add PDFs to protect' : 'Add locked PDFs to unlock' }}</p>
+          <p class="text-on-surface-variant text-body-md">or click to browse</p>
+        </div>
+      } @else {
+        <div class="border border-outline-variant rounded-lg divide-y divide-outline-variant">
+          @for (f of files(); track f.path; let i = $index) {
+            <div class="px-4 py-3 flex items-center gap-3 hover:bg-surface-container transition-colors">
+              <div class="w-8 h-10 bg-error/10 text-error flex items-center justify-center rounded border border-error/20"><span class="material-symbols-outlined" style="font-size:20px;">picture_as_pdf</span></div>
+              <span class="flex-1 text-body-md font-medium truncate">{{ f.name }}</span>
+              <span class="font-mono-sm text-on-surface-variant text-label-md">{{ fmtBytes(f.size) }}</span>
+              <button (click)="remove(i)" class="text-outline hover:text-error transition-colors p-1"><span class="material-symbols-outlined">delete</span></button>
+            </div>
+          }
+        </div>
+      }
+      <div class="mt-8 flex justify-end items-center gap-6">
+        <div class="text-right">
+          <p class="text-label-md text-on-surface-variant">Summary</p>
+          <p class="text-body-md font-bold">{{ summary() }}</p>
+        </div>
+        <button (click)="apply()" [disabled]="!canRun()"
+                class="bg-primary text-on-primary px-10 py-3.5 rounded-lg text-headline-md flex items-center gap-3 shadow-lg shadow-primary/20 hover:brightness-110 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none">
+          <span class="material-symbols-outlined">{{ mode()==='add' ? 'lock' : 'lock_open' }}</span> {{ mode()==='add' ? 'Protect' : 'Unlock' }}
+        </button>
+      </div>
+    </div>
+  </div>
+} @else {
+  <app-process-status [stage]="runner.stage() === 'processing' ? 'processing' : runner.stage() === 'done' ? 'done' : 'error'"
+    [progress]="runner.progress()" [message]="runner.message()" [result]="runner.result()" [error]="runner.error()"
+    [doneTitle]="mode()==='add' ? 'PDFs protected' : 'Passwords removed'" icon="security"
+    (reset)="reset()" (openFolder)="openResultFolder()" (openFile)="pdf.openPath($event)" />
+}

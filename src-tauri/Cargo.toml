@@ -1,0 +1,40 @@
+[package]
+name = "pdf-toolbox"
+version = "0.1.0"
+description = "A local, offline PDF tools suite"
+authors = ["you"]
+edition = "2021"
+
+[lib]
+name = "pdf_toolbox_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset"] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# PDF + image processing (all local, no network)
+lopdf = "0.34"
+image = "0.25"
+
+# Optional: PDF page rasterization (Extract -> pages as images).
+# Enable with `--features render`; requires the pdfium library at runtime.
+pdfium-render = { version = "0.8", optional = true }
+
+[features]
+# Rasterize PDF pages to images via pdfium (opt-in native dependency).
+render = ["dep:pdfium-render"]
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true

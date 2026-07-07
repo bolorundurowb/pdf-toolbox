@@ -1,0 +1,79 @@
+/* =========================================================================
+   PDF Toolbox - global styles (Tailwind + Material 3 tokens, offline)
+   ========================================================================= */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---- Self-hosted fonts (offline) ---- */
+@font-face { font-family:'Geist'; font-weight:400; font-style:normal; font-display:swap;
+  src:url('assets/fonts/Geist-Regular.woff2') format('woff2'); }
+@font-face { font-family:'Geist'; font-weight:500; font-style:normal; font-display:swap;
+  src:url('assets/fonts/Geist-Medium.woff2') format('woff2'); }
+@font-face { font-family:'Geist'; font-weight:600; font-style:normal; font-display:swap;
+  src:url('assets/fonts/Geist-SemiBold.woff2') format('woff2'); }
+@font-face { font-family:'Geist'; font-weight:700; font-style:normal; font-display:swap;
+  src:url('assets/fonts/Geist-Bold.woff2') format('woff2'); }
+@font-face { font-family:'JetBrains Mono'; font-weight:400; font-style:normal; font-display:swap;
+  src:url('assets/fonts/JetBrainsMono-Regular.woff2') format('woff2'); }
+@font-face { font-family:'JetBrains Mono'; font-weight:500; font-style:normal; font-display:swap;
+  src:url('assets/fonts/JetBrainsMono-Medium.woff2') format('woff2'); }
+@font-face {
+  font-family: 'Material Symbols Outlined';
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: block;
+  src: url('assets/material-symbols/material-symbols-outlined.woff2') format('woff2');
+}
+
+@layer base {
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: 'Geist', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow: hidden;
+  }
+}
+
+/* Material Symbols glyph helper */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-flex;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  font-variation-settings: 'opsz' 24, 'wght' 400, 'GRAD' 0, 'FILL' 0;
+  vertical-align: middle;
+}
+.material-symbols-outlined.fill { font-variation-settings: 'opsz' 24, 'wght' 400, 'GRAD' 0, 'FILL' 1; }
+
+/* Scrollbars */
+.custom-scrollbar::-webkit-scrollbar, ::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb {
+  background: var(--tw-scrollbar, #c3c6d7);
+  border-radius: 999px; border: 3px solid transparent; background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: #a6a9bb; background-clip: content-box; }
+
+@keyframes fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.animate-fade-in { animation: fade-in .2s ease-out; }
+@keyframes pdfspin { to { transform: rotate(360deg); } }
+
+/* Active sidebar item: blue text, bold, left pill, container bg */
+.nav-active {
+  color: #004ac6 !important;
+  font-weight: 700;
+  background: #e7e7f3;
+  border-left: 4px solid #004ac6;
+  padding-left: calc(1rem - 4px);
+}
+.nav-active .material-symbols-outlined { font-variation-settings: 'opsz' 24, 'wght' 500, 'GRAD' 0, 'FILL' 1; }

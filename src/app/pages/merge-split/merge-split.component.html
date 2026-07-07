@@ -1,0 +1,219 @@
+@if (runner.stage() === 'idle') {
+  <div class="p-padding-lg flex flex-col gap-6 h-full overflow-y-auto custom-scrollbar">
+    <!-- Header + tabs -->
+    <div class="flex items-end justify-between flex-wrap gap-4">
+      <div>
+        <h2 class="text-headline-lg text-on-surface">Merge &amp; Split PDF</h2>
+        <p class="text-on-surface-variant text-body-md">Combine multiple documents or extract specific pages with precision.</p>
+      </div>
+      <div class="flex p-1 bg-surface-container rounded-lg border border-outline-variant">
+        <button (click)="setTab('merge')" class="px-6 py-2 rounded-md transition-all flex items-center gap-2 text-label-md"
+                [class.bg-surface-container-lowest]="tab()==='merge'" [class.text-primary]="tab()==='merge'" [class.font-bold]="tab()==='merge'" [class.shadow-sm]="tab()==='merge'"
+                [class.text-on-surface-variant]="tab()!=='merge'">
+          <span class="material-symbols-outlined" style="font-size:18px;">call_merge</span> Merge
+        </button>
+        <button (click)="setTab('split')" class="px-6 py-2 rounded-md transition-all flex items-center gap-2 text-label-md"
+                [class.bg-surface-container-lowest]="tab()==='split'" [class.text-primary]="tab()==='split'" [class.font-bold]="tab()==='split'" [class.shadow-sm]="tab()==='split'"
+                [class.text-on-surface-variant]="tab()!=='split'">
+          <span class="material-symbols-outlined" style="font-size:18px;">call_split</span> Split
+        </button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-12 gap-6 items-start">
+      <!-- LEFT -->
+      <div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+        @if (tab() === 'merge') {
+          <div (click)="addMergeFiles()"
+               class="h-44 rounded-xl flex flex-col items-center justify-center border-2 border-dashed border-outline-variant hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer group">
+            <div class="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center text-primary mb-3 group-hover:scale-110 transition-transform">
+              <span class="material-symbols-outlined" style="font-size:36px;">cloud_upload</span>
+            </div>
+            <p class="text-headline-md text-on-surface">Drag and drop PDFs here</p>
+            <p class="text-on-surface-variant text-body-md mt-1">or <span class="text-primary font-bold">browse files</span></p>
+          </div>
+
+          @if (files().length > 0) {
+            <div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+              <div class="px-6 py-4 border-b border-outline-variant flex items-center justify-between">
+                <h3 class="font-bold text-on-surface">Files to Combine ({{ files().length }})</h3>
+                <span class="text-label-md text-on-surface-variant">Drag to reorder</span>
+              </div>
+              <div class="divide-y divide-outline-variant">
+                @for (f of files(); track f.path; let i = $index) {
+                  <div draggable="true" (dragstart)="onDragStart(i)" (dragover)="onDragOver($event)" (drop)="onDrop(i)"
+                       class="px-6 py-4 flex items-center gap-4 hover:bg-surface-container-low transition-colors group">
+                    <span class="material-symbols-outlined text-outline cursor-grab active:cursor-grabbing">drag_indicator</span>
+                    <div class="w-10 h-12 bg-error/10 border border-error/20 rounded flex items-center justify-center text-error">
+                      <span class="material-symbols-outlined" style="font-size:24px;">description</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p class="font-medium text-on-surface truncate">{{ f.name }}</p>
+                      <p class="text-xs font-mono-sm" [class.text-on-surface-variant]="!f.error" [class.text-error]="f.error">{{ f.error || fileMeta(f) }}</p>
+                    </div>
+                    <button (click)="removeMerge(i)" class="p-2 text-on-surface-variant hover:text-error hover:bg-error/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span class="material-symbols-outlined">delete</span>
+                    </button>
+                  </div>
+                }
+              </div>
+              <div class="bg-surface-container-low px-6 py-4 border-t border-outline-variant flex justify-center">
+                <button (click)="addMergeFiles()" class="text-primary font-bold flex items-center gap-2 hover:bg-primary/5 px-4 py-2 rounded-lg transition-colors">
+                  <span class="material-symbols-outlined">add_circle</span> Add More Files
+                </button>
+              </div>
+            </div>
+          }
+        } @else {
+          <!-- SPLIT -->
+          @if (!splitFile()) {
+            <div (click)="chooseSplitFile()"
+                 class="h-44 rounded-xl flex flex-col items-center justify-center border-2 border-dashed border-outline-variant hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer group">
+              <div class="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center text-primary mb-3 group-hover:scale-110 transition-transform">
+                <span class="material-symbols-outlined" style="font-size:36px;">upload_file</span>
+              </div>
+              <p class="text-headline-md text-on-surface">Choose a PDF to split</p>
+              <p class="text-on-surface-variant text-body-md mt-1">or <span class="text-primary font-bold">browse files</span></p>
+            </div>
+          } @else {
+            <div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+              <div class="px-6 py-5 border-b border-outline-variant flex items-center justify-between gap-4">
+                <div class="flex items-center gap-4 min-w-0">
+                  <div class="w-12 h-14 bg-error/10 border border-error/20 rounded flex items-center justify-center text-error shrink-0">
+                    <span class="material-symbols-outlined" style="font-size:28px;">description</span>
+                  </div>
+                  <div class="min-w-0">
+                    <h3 class="font-bold text-on-surface truncate">{{ splitFile()!.name }}</h3>
+                    <p class="text-xs text-on-surface-variant font-mono-sm">{{ fileMeta(splitFile()!) }}</p>
+                  </div>
+                </div>
+                <button (click)="chooseSplitFile()" class="px-4 py-2 border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-container transition-all flex items-center gap-2 shrink-0">
+                  <span class="material-symbols-outlined">change_circle</span> Change
+                </button>
+              </div>
+              <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Ranges -->
+                <div (click)="splitMode.set('ranges')" class="p-4 border rounded-xl bg-surface-container-low hover:border-primary transition-all cursor-pointer"
+                     [class.border-primary]="splitMode()==='ranges'" [class.border-outline-variant]="splitMode()!=='ranges'">
+                  <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary"><span class="material-symbols-outlined fill">auto_stories</span></div>
+                    <h4 class="font-bold text-on-surface">Split by Ranges</h4>
+                    <input type="radio" name="split-method" class="ml-auto accent-primary h-5 w-5" [checked]="splitMode()==='ranges'" (change)="splitMode.set('ranges')" />
+                  </div>
+                  <p class="text-body-md text-on-surface-variant mb-4">Extract specific sets of pages into separate files.</p>
+                  <label class="block font-label-md text-on-surface-variant mb-2">Define Page Ranges</label>
+                  <input type="text" [value]="rangeText()" (input)="onRange($event)"
+                         class="w-full px-4 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono-sm text-on-surface bg-surface" />
+                  <p class="text-[10px] text-on-surface-variant italic mt-1">Example: 1-5, 8, 11-13</p>
+                </div>
+                <!-- Size -->
+                <div (click)="splitMode.set('size')" class="p-4 border rounded-xl hover:border-primary transition-all cursor-pointer"
+                     [class.border-primary]="splitMode()==='size'" [class.border-outline-variant]="splitMode()!=='size'">
+                  <div class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center text-secondary"><span class="material-symbols-outlined">data_usage</span></div>
+                    <h4 class="font-bold text-on-surface">Split by Size</h4>
+                    <input type="radio" name="split-method" class="ml-auto accent-primary h-5 w-5" [checked]="splitMode()==='size'" (change)="splitMode.set('size')" />
+                  </div>
+                  <p class="text-body-md text-on-surface-variant mb-4">Divide the file into parts under a maximum size.</p>
+                  <label class="block font-label-md text-on-surface-variant mb-2">Max Size per File (MB)</label>
+                  <div class="relative">
+                    <input type="number" min="1" [value]="maxSizeMb()" (input)="onMaxSize($event)"
+                           class="w-full px-4 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono-sm text-on-surface bg-surface" />
+                    <span class="absolute right-4 top-2 text-on-surface-variant font-label-md">MB</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Visual preview -->
+            <div class="bg-surface-container-low border border-outline-variant rounded-xl p-6">
+              <div class="flex items-center justify-between mb-5">
+                <h4 class="font-bold text-on-surface flex items-center gap-2"><span class="material-symbols-outlined">preview</span> Visual Preview</h4>
+                <span class="text-label-md text-on-surface-variant">{{ splitMode()==='ranges' ? 'Highlighted pages are included' : 'Coloured by output part' }}</span>
+              </div>
+              <div class="grid grid-cols-6 md:grid-cols-10 gap-3">
+                @for (p of previewPages(); track p.n) {
+                  <div class="relative">
+                    <div class="aspect-[3/4] bg-white rounded shadow-sm overflow-hidden p-2 border-2 transition-colors"
+                         [class.border-primary]="p.on && splitMode()==='ranges'" [class.border-outline-variant]="!(p.on && splitMode()==='ranges')">
+                      <div class="w-2/3 h-1.5 bg-outline-variant rounded-full mb-1"></div>
+                      <div class="w-full h-1 bg-outline-variant/30 rounded-full mb-1"></div>
+                      <div class="w-1/2 h-1 bg-outline-variant/30 rounded-full"></div>
+                    </div>
+                    @if (p.on && splitMode()==='ranges') {
+                      <div class="absolute inset-0 bg-primary/10 flex items-center justify-center rounded">
+                        <span class="material-symbols-outlined text-primary fill" style="font-size:20px;">check_circle</span>
+                      </div>
+                    }
+                    <span class="block text-center mt-1 text-[10px] font-medium" [class.text-primary]="p.on && splitMode()==='ranges'" [class.text-on-surface-variant]="!(p.on && splitMode()==='ranges')">{{ p.n }}</span>
+                  </div>
+                }
+                @if (moreCount() > 0) {
+                  <div class="aspect-[3/4] border border-outline-variant border-dashed rounded flex flex-col items-center justify-center text-outline-variant">
+                    <span class="material-symbols-outlined">more_horiz</span>
+                    <span class="text-[10px]">+{{ moreCount() }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        }
+      </div>
+
+      <!-- RIGHT -->
+      <div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+        <div class="bg-surface-container-highest rounded-xl p-6 border border-outline-variant">
+          <h3 class="font-bold text-on-surface mb-4">Summary</h3>
+          <div class="space-y-4">
+            <div class="flex justify-between text-body-md"><span class="text-on-surface-variant">Operation:</span><span class="font-bold text-primary">{{ summaryOp() }}</span></div>
+            <div class="flex justify-between text-body-md"><span class="text-on-surface-variant">Input:</span><span class="font-medium text-on-surface">{{ summaryFiles() }}</span></div>
+            <div class="flex justify-between text-body-md"><span class="text-on-surface-variant">Total Size:</span><span class="font-medium text-on-surface font-mono-sm">{{ summarySize() }}</span></div>
+            <div class="pt-4 border-t border-outline-variant">
+              <label class="block font-label-md text-on-surface-variant mb-2">Output Filename</label>
+              <div class="relative">
+                @if (tab()==='merge') {
+                  <input [value]="mergeName()" (input)="mergeName.set($any($event.target).value)" placeholder="Merged document" type="text"
+                         class="w-full px-4 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary pr-12 bg-surface" />
+                  <span class="absolute right-4 top-2 text-on-surface-variant font-label-md">.pdf</span>
+                } @else {
+                  <input [value]="splitName()" (input)="splitName.set($any($event.target).value)" placeholder="Auto (part_1, part_2…)" type="text"
+                         class="w-full px-4 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary bg-surface" />
+                }
+              </div>
+            </div>
+          </div>
+          <button (click)="process()" [disabled]="!canRun()"
+                  class="w-full mt-8 bg-primary text-on-primary py-4 rounded-xl font-bold text-headline-md flex items-center justify-center gap-3 shadow-lg shadow-primary/20 hover:brightness-110 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none">
+            <span class="material-symbols-outlined">settings_suggest</span> Process PDF
+          </button>
+        </div>
+
+        @if (tab()==='merge') {
+          <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-sm">
+            <h3 class="font-bold text-on-surface mb-4 flex items-center gap-2"><span class="material-symbols-outlined" style="font-size:18px;">tune</span> Advanced Options</h3>
+            <label class="flex items-center gap-3 cursor-pointer">
+              <input type="checkbox" [checked]="optimize()" (change)="optimize.set($any($event.target).checked)" class="rounded accent-primary h-5 w-5 border-outline-variant" />
+              <div class="flex-1">
+                <p class="font-medium text-on-surface text-body-md">Optimize output size</p>
+                <p class="text-xs text-on-surface-variant">Recompress the merged file (needs Ghostscript)</p>
+              </div>
+            </label>
+          </div>
+        }
+
+        <div class="bg-secondary-container/20 border border-secondary-container rounded-xl p-6 flex gap-4">
+          <span class="material-symbols-outlined text-secondary">lightbulb</span>
+          <div>
+            <p class="font-bold text-on-secondary-container text-body-md">Pro Tip</p>
+            <p class="text-on-secondary-container/80 text-sm mt-1">Drag file items in the list to change the merge order.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+} @else {
+  <app-process-status [stage]="runner.stage() === 'processing' ? 'processing' : runner.stage() === 'done' ? 'done' : 'error'"
+    [progress]="runner.progress()" [message]="runner.message()" [result]="runner.result()" [error]="runner.error()"
+    [doneTitle]="tab()==='merge' ? 'PDFs merged' : 'PDF split'" icon="call_merge"
+    (reset)="reset()" (openFolder)="openResultFolder()" (openFile)="pdf.openPath($event)" />
+}

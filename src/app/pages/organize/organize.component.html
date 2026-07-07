@@ -1,0 +1,72 @@
+@if (runner.stage() === 'idle') {
+  <div class="p-padding-lg max-w-5xl mx-auto w-full space-y-container-gap overflow-y-auto custom-scrollbar h-full flex flex-col">
+    <div>
+      <h2 class="text-display text-on-surface">Organize Pages</h2>
+      <p class="text-body-lg text-on-surface-variant mt-1">Drag to reorder, rotate, or remove pages — then save a new PDF.</p>
+    </div>
+
+    @if (!file()) {
+      <div (click)="choose()" class="border-2 border-dashed border-outline-variant rounded-xl p-12 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
+        <span class="material-symbols-outlined text-primary" style="font-size:40px;">upload_file</span>
+        <p class="text-headline-md mt-3">Choose a PDF</p>
+        <p class="text-on-surface-variant text-body-md">or click to browse your files</p>
+      </div>
+    } @else {
+      <div class="bg-surface border border-outline-variant rounded-xl flex-1 flex flex-col overflow-hidden">
+        <div class="px-6 py-4 border-b border-outline-variant flex items-center gap-3">
+          <div class="w-9 h-11 bg-error/10 border border-error/20 rounded flex items-center justify-center text-error"><span class="material-symbols-outlined" style="font-size:20px;">picture_as_pdf</span></div>
+          <div class="flex-1 min-w-0">
+            <p class="font-medium truncate">{{ file()!.name }}</p>
+            <p class="text-label-md text-on-surface-variant font-mono-sm">
+              {{ tiles().length }} of {{ file()!.pages ?? 0 }} pages kept@if (removedCount() > 0) {<span> · {{ removedCount() }} removed</span>}
+            </p>
+          </div>
+          <button (click)="resetOrder()" class="px-4 py-2 border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-container transition-all flex items-center gap-2"><span class="material-symbols-outlined" style="font-size:18px;">restart_alt</span> Reset</button>
+          <button (click)="clearFile()" class="px-4 py-2 border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-container transition-all flex items-center gap-2"><span class="material-symbols-outlined" style="font-size:18px;">change_circle</span> Change</button>
+        </div>
+
+        <div class="p-6 overflow-y-auto custom-scrollbar flex-1">
+          @if (tiles().length === 0) {
+            <p class="text-on-surface-variant text-body-md text-center py-10">All pages removed. Reset to start over.</p>
+          } @else {
+            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+              @for (t of tiles(); track t.key; let i = $index) {
+                <div draggable="true" (dragstart)="onDragStart(i)" (dragover)="onDragOver($event)" (drop)="onDrop(i)"
+                     class="group relative cursor-grab active:cursor-grabbing">
+                  <div class="aspect-[3/4] bg-white border border-outline-variant rounded-lg shadow-sm overflow-hidden flex items-center justify-center transition-transform"
+                       [style.transform]="'rotate(' + t.rotate + 'deg)'">
+                    <div class="text-center">
+                      <span class="material-symbols-outlined text-outline-variant" style="font-size:28px;">description</span>
+                      <div class="text-[10px] font-mono-sm text-on-surface-variant mt-1">p{{ t.source }}</div>
+                    </div>
+                  </div>
+                  <div class="absolute top-1 left-1 bg-surface/90 backdrop-blur rounded px-1.5 text-[10px] font-bold text-on-surface">{{ i + 1 }}</div>
+                  <div class="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button (click)="rotate(i)" title="Rotate" class="w-6 h-6 bg-surface/90 backdrop-blur rounded flex items-center justify-center text-on-surface-variant hover:text-primary shadow-sm"><span class="material-symbols-outlined" style="font-size:15px;">rotate_right</span></button>
+                    <button (click)="remove(i)" title="Remove" class="w-6 h-6 bg-surface/90 backdrop-blur rounded flex items-center justify-center text-error hover:bg-error hover:text-white shadow-sm"><span class="material-symbols-outlined" style="font-size:15px;">delete</span></button>
+                  </div>
+                  @if (t.rotate !== 0) {
+                    <div class="absolute bottom-1 right-1 bg-primary text-on-primary rounded px-1 text-[9px] font-mono-sm">{{ t.rotate }}°</div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="px-6 py-4 bg-surface-container-low border-t border-outline-variant flex justify-between items-center">
+          <span class="text-label-md text-on-surface-variant">Drag tiles to reorder</span>
+          <button (click)="save()" [disabled]="!canRun()"
+                  class="bg-primary text-on-primary px-8 py-3 rounded-lg font-label-md flex items-center gap-2 shadow-sm hover:brightness-110 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+            <span class="material-symbols-outlined" style="font-size:19px;">save</span> Save PDF
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+} @else {
+  <app-process-status [stage]="runner.stage() === 'processing' ? 'processing' : runner.stage() === 'done' ? 'done' : 'error'"
+    [progress]="runner.progress()" [message]="runner.message()" [result]="runner.result()" [error]="runner.error()"
+    doneTitle="Pages organized" icon="reorder"
+    (reset)="reset()" (openFolder)="openResultFolder()" (openFile)="pdf.openPath($event)" />
+}

@@ -1,0 +1,86 @@
+@if (runner.stage() === 'idle') {
+  <div class="p-padding-lg max-w-3xl mx-auto w-full space-y-container-gap overflow-y-auto custom-scrollbar h-full">
+    <div>
+      <h2 class="text-display text-on-surface">Extract</h2>
+      <p class="text-body-lg text-on-surface-variant mt-1">Pull text out of a PDF, or export its pages as images.</p>
+    </div>
+
+    @if (!file()) {
+      <div (click)="choose()" class="border-2 border-dashed border-outline-variant rounded-xl p-12 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
+        <span class="material-symbols-outlined text-primary" style="font-size:40px;">upload_file</span>
+        <p class="text-headline-md mt-3">Choose a PDF</p>
+        <p class="text-on-surface-variant text-body-md">or click to browse your files</p>
+      </div>
+    } @else {
+      <div class="bg-surface border border-outline-variant rounded-xl overflow-hidden">
+        <div class="px-6 py-4 border-b border-outline-variant flex items-center gap-3">
+          <div class="w-9 h-11 bg-error/10 border border-error/20 rounded flex items-center justify-center text-error"><span class="material-symbols-outlined" style="font-size:20px;">picture_as_pdf</span></div>
+          <div class="flex-1 min-w-0">
+            <p class="font-medium truncate">{{ file()!.name }}</p>
+            <p class="text-label-md text-on-surface-variant font-mono-sm">{{ file()!.pages ?? '—' }} pages · {{ fmtBytes(file()!.size) }}</p>
+          </div>
+          <button (click)="clearFile()" class="px-4 py-2 border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-container transition-all flex items-center gap-2"><span class="material-symbols-outlined">change_circle</span> Change</button>
+        </div>
+
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div (click)="setMode('text')" class="p-4 border rounded-xl hover:border-primary transition-all cursor-pointer"
+               [class.border-primary]="mode()==='text'" [class.bg-surface-container-low]="mode()==='text'" [class.border-outline-variant]="mode()!=='text'">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary"><span class="material-symbols-outlined">article</span></div>
+              <h4 class="font-bold text-on-surface">Extract Text</h4>
+              <input type="radio" name="ex-mode" class="ml-auto accent-primary h-5 w-5" [checked]="mode()==='text'" (change)="setMode('text')" />
+            </div>
+            <p class="text-body-md text-on-surface-variant">Save all readable text to a .txt file.</p>
+          </div>
+
+          <div (click)="setMode('images')" class="p-4 border rounded-xl hover:border-primary transition-all cursor-pointer"
+               [class.border-primary]="mode()==='images'" [class.bg-surface-container-low]="mode()==='images'" [class.border-outline-variant]="mode()!=='images'">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center text-secondary"><span class="material-symbols-outlined">image</span></div>
+              <h4 class="font-bold text-on-surface">Pages as Images</h4>
+              <input type="radio" name="ex-mode" class="ml-auto accent-primary h-5 w-5" [checked]="mode()==='images'" (change)="setMode('images')" />
+            </div>
+            <p class="text-body-md text-on-surface-variant">Render each page to a PNG or JPG.</p>
+          </div>
+        </div>
+
+        @if (mode() === 'images') {
+          <div class="px-6 pb-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div class="space-y-2">
+              <label class="font-label-md text-on-surface-variant block uppercase tracking-wider">Format</label>
+              <div class="flex bg-surface-container-high rounded p-1">
+                <button (click)="imageFormat.set('png')" class="flex-1 py-2 text-label-md font-medium rounded transition-colors"
+                        [class.bg-surface]="imageFormat()==='png'" [class.text-primary]="imageFormat()==='png'" [class.shadow-sm]="imageFormat()==='png'" [class.text-on-surface-variant]="imageFormat()!=='png'">PNG</button>
+                <button (click)="imageFormat.set('jpg')" class="flex-1 py-2 text-label-md font-medium rounded transition-colors"
+                        [class.bg-surface]="imageFormat()==='jpg'" [class.text-primary]="imageFormat()==='jpg'" [class.shadow-sm]="imageFormat()==='jpg'" [class.text-on-surface-variant]="imageFormat()!=='jpg'">JPG</button>
+              </div>
+            </div>
+            <div class="space-y-2">
+              <label class="font-label-md text-on-surface-variant block uppercase tracking-wider">Resolution (DPI)</label>
+              <select [value]="dpi()" (change)="dpi.set(+$any($event.target).value)" class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
+                @for (d of dpis; track d) { <option [value]="d">{{ d }} DPI</option> }
+              </select>
+            </div>
+            <p class="sm:col-span-2 text-label-md text-on-surface-variant flex items-center gap-2">
+              <span class="material-symbols-outlined text-outline" style="font-size:18px;">info</span>
+              Page rendering needs the pdfium library (bundled via <span class="font-mono-sm">--features render</span>). See README.
+            </p>
+          </div>
+        }
+
+        <div class="px-6 py-4 bg-surface-container-low border-t border-outline-variant flex justify-end">
+          <button (click)="run()" [disabled]="!canRun()"
+                  class="bg-primary text-on-primary px-8 py-3 rounded-lg font-label-md flex items-center gap-2 shadow-sm hover:brightness-110 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+            <span class="material-symbols-outlined" style="font-size:19px;">{{ mode()==='text' ? 'article' : 'image' }}</span>
+            {{ mode()==='text' ? 'Extract Text' : 'Export Images' }}
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+} @else {
+  <app-process-status [stage]="runner.stage() === 'processing' ? 'processing' : runner.stage() === 'done' ? 'done' : 'error'"
+    [progress]="runner.progress()" [message]="runner.message()" [result]="runner.result()" [error]="runner.error()"
+    [doneTitle]="mode()==='text' ? 'Text extracted' : 'Pages exported'" icon="article"
+    (reset)="reset()" (openFolder)="openResultFolder()" (openFile)="pdf.openPath($event)" />
+}

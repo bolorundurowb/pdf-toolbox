@@ -1,0 +1,31 @@
+<div class="home">
+  <div class="home__intro">
+    <h1 class="ds-h1 home__title">PDF Toolbox</h1>
+    <p class="ds-body-lg home__lede">
+      A local suite for everyday PDF work — merge, split, compress, and turn images
+      into a document. Everything runs on your device.
+    </p>
+  </div>
+
+  <div class="home__grid">
+    @for (card of cards; track card.id) {
+      <button type="button" class="tool-card" (click)="openTool.emit(card.id)">
+        <div class="tool-card__icon" [style.background]="card.bg">
+          <span class="msr msr-fill" [style.color]="card.ink" style="font-size: 27px;">{{ card.icon }}</span>
+        </div>
+        <div class="tool-card__body">
+          <div class="tool-card__head">
+            <h3 class="ds-h3 tool-card__title">{{ card.title }}</h3>
+            <span class="msr tool-card__arrow">arrow_forward</span>
+          </div>
+          <p class="ds-body tool-card__desc">{{ card.desc }}</p>
+        </div>
+      </button>
+    }
+  </div>
+
+  <div class="home__footnote">
+    <span class="msr" style="font-size: 16px; color: var(--green-635);">lock</span>
+    <span>All processing happens on this device. No files are uploaded and nothing leaves your computer.</span>
+  </div>
+</div>
