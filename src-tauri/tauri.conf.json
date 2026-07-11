@@ -13,10 +13,10 @@
     "windows": [
       {
         "title": "PDF Toolbox",
-        "width": 1280,
-        "height": 840,
-        "minWidth": 1024,
-        "minHeight": 680
+        "width": 960,
+        "height": 630,
+        "minWidth": 768,
+        "minHeight": 510
       }
     ],
     "security": {

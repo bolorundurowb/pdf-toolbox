@@ -22,24 +22,32 @@
           <button (click)="clearFile()" class="px-4 py-2 border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-container transition-all flex items-center gap-2"><span class="material-symbols-outlined">change_circle</span> Change</button>
         </div>
 
-        <div class="p-6 space-y-5">
+        <div class="p-6">
           @if (loading()) {
             <p class="text-on-surface-variant text-body-md">Reading metadata…</p>
           } @else {
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+              @for (fld of fields; track fld.key) {
+                @if (!fld.area) {
+                  <div class="space-y-2">
+                    <label class="font-label-md text-on-surface-variant block uppercase tracking-wider">{{ fld.label }}</label>
+                    <input type="text" [value]="meta()[fld.key]" (input)="update(fld.key, $any($event.target).value)" [placeholder]="fld.hint"
+                           class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-body-md" />
+                  </div>
+                }
+              }
+            </div>
             @for (fld of fields; track fld.key) {
-              <div class="space-y-2">
-                <label class="font-label-md text-on-surface-variant block uppercase tracking-wider">{{ fld.label }}</label>
-                @if (fld.area) {
+              @if (fld.area) {
+                <div class="space-y-2 mt-gutter">
+                  <label class="font-label-md text-on-surface-variant block uppercase tracking-wider">{{ fld.label }}</label>
                   <textarea rows="2" [value]="meta()[fld.key]" (input)="update(fld.key, $any($event.target).value)" [placeholder]="fld.hint"
                             class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-body-md"></textarea>
-                } @else {
-                  <input type="text" [value]="meta()[fld.key]" (input)="update(fld.key, $any($event.target).value)" [placeholder]="fld.hint"
-                         class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-body-md" />
-                }
-              </div>
+                </div>
+              }
             }
             @if (meta().producer) {
-              <div class="text-label-md text-on-surface-variant">Producer: <span class="font-mono-sm">{{ meta().producer }}</span></div>
+              <div class="text-label-md text-on-surface-variant mt-gutter">Producer: <span class="font-mono-sm">{{ meta().producer }}</span></div>
             }
           }
         </div>

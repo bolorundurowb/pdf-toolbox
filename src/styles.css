@@ -75,3 +75,12 @@
 }
 .nav-active .nav-icon { opacity: 1; }
 .nav-active .material-symbols-outlined { font-variation-settings: 'opsz' 24, 'wght' 500, 'GRAD' 0, 'FILL' 1; }
+
+/* Global UI scale — render the whole app 25% smaller.
+   Zoom lives on <body>; the layout shell uses 133.334vh/vw so that after the
+   0.75 zoom it fills the window exactly (no blank strip, nothing cut off). */
+body { zoom: 0.75; }
+
+/* Routed page hosts must fill the main panel so pages using h-full
+   (e.g. Image to PDF's settings sidebar) stretch the full height. */
+main > :not(router-outlet) { display: block; height: 100%; min-height: 0; }
