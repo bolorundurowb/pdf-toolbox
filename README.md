@@ -8,16 +8,16 @@ your computer.
 
 ## Features
 
-| Page | What it does | Engine |
-|------|--------------|--------|
-| **Dashboard** | Quick actions + recent output files from your save folder | filesystem |
-| **Image to PDF** | Combine JPG/PNG/TIFF/HEIC into one PDF (size, orientation, margin, quality) | lopdf + image |
-| **Merge / Split** | Merge (drag-reorder) or split by ranges / max file size | lopdf |
-| **Organize** | Reorder, rotate, and delete pages → new PDF | lopdf |
-| **Compress** | Shrink PDFs (Low / Recommended / Extreme, grayscale, strip metadata) | lopdf |
-| **Extract** | Text → `.txt` (pure Rust); pages → PNG/JPG (pdfium, optional) | lopdf / pdfium |
-| **Security** | Add password (AES-256/128, RC4) or remove a known password | lopdf |
-| **Metadata** | View / edit Title, Author, Subject, Keywords, Creator | lopdf |
+| Page              | What it does                                                                | Engine         |
+|-------------------|-----------------------------------------------------------------------------|----------------|
+| **Dashboard**     | Quick actions + recent output files from your save folder                   | filesystem     |
+| **Image to PDF**  | Combine JPG/PNG/TIFF/HEIC into one PDF (size, orientation, margin, quality) | lopdf + image  |
+| **Merge / Split** | Merge (drag-reorder) or split by ranges / max file size                     | lopdf          |
+| **Organize**      | Reorder, rotate, and delete pages → new PDF                                 | lopdf          |
+| **Compress**      | Shrink PDFs (Low / Recommended / Extreme, grayscale, strip metadata)        | lopdf          |
+| **Extract**       | Text → `.txt` (pure Rust); pages → PNG/JPG (pdfium, optional)               | lopdf / pdfium |
+| **Security**      | Add password (AES-256/128, RC4) or remove a known password                  | lopdf          |
+| **Metadata**      | View / edit Title, Author, Subject, Keywords, Creator                       | lopdf          |
 
 All core PDF tools are **pure Rust** via [lopdf](https://github.com/J-F-Liu/lopdf). The only
 optional native dependency is pdfium for page-to-image export (off by default).
