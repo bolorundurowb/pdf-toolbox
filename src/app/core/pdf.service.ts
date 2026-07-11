@@ -26,14 +26,6 @@ export class PdfService {
     return this.toArray(sel);
   }
 
-  /** Pick a single PDF or image (used by the top-bar "Open File"). */
-  async pickAny(): Promise<string | null> {
-    const sel = await open({
-      multiple: false, directory: false,
-      filters: [{ name: 'PDF or image', extensions: ['pdf', ...IMAGE_EXTS] }],
-    });
-    return typeof sel === 'string' ? sel : null;
-  }
 
   async inspect(paths: string[]): Promise<InputFile[]> {
     if (paths.length === 0) return [];

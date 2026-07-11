@@ -9,8 +9,6 @@ interface QuickAction {
   hint: string;
   icon: string;
   route: string;
-  iconBg: string;
-  iconFg: string;
 }
 
 @Component({
@@ -26,11 +24,11 @@ export class DashboardComponent implements OnInit {
   readonly loading = signal(true);
 
   readonly actions: QuickAction[] = [
-    { label: 'Image to PDF', hint: 'JPG, PNG, TIFF', icon: 'image', route: '/images', iconBg: 'bg-secondary-container', iconFg: 'text-primary' },
-    { label: 'Merge/Split', hint: 'Combine or divide', icon: 'call_merge', route: '/merge-split', iconBg: 'bg-tertiary-fixed', iconFg: 'text-tertiary' },
-    { label: 'Compress', hint: 'Optimise size', icon: 'compress', route: '/compress', iconBg: 'bg-primary-fixed', iconFg: 'text-primary' },
-    { label: 'Security', hint: 'Protect / Unlock', icon: 'security', route: '/security', iconBg: 'bg-error-container', iconFg: 'text-error' },
-    { label: 'Metadata', hint: 'Edit properties', icon: 'info', route: '/metadata', iconBg: 'bg-outline-variant/30', iconFg: 'text-on-surface-variant' },
+    { label: 'Image to PDF', hint: 'JPG, PNG, TIFF', icon: 'image', route: '/images' },
+    { label: 'Merge/Split', hint: 'Combine or divide', icon: 'call_merge', route: '/merge-split' },
+    { label: 'Compress', hint: 'Optimise size', icon: 'compress', route: '/compress' },
+    { label: 'Security', hint: 'Protect / Unlock', icon: 'security', route: '/security' },
+    { label: 'Metadata', hint: 'Edit properties', icon: 'info', route: '/metadata' },
   ];
 
   constructor(private readonly pdf: PdfService) {}
