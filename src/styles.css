@@ -62,12 +62,16 @@
 .animate-fade-in { animation: fade-in .2s ease-out; }
 @keyframes pdfspin { to { transform: rotate(360deg); } }
 
-/* Active sidebar item: teal text, bold, left pill, container bg */
+/* Sidebar nav: inactive icons are dimmed, brighten on hover */
+.nav-icon { opacity: 0.6; transition: opacity .15s ease; }
+.nav-item:hover .nav-icon { opacity: 1; }
+
+/* Active sidebar item: white pill, soft shadow, teal bold text, filled icon */
 .nav-active {
   color: #057a75 !important;
   font-weight: 700;
-  background: #e7e7f3;
-  border-left: 4px solid #057a75;
-  padding-left: calc(1rem - 4px);
+  background: #ffffff;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.04);
 }
+.nav-active .nav-icon { opacity: 1; }
 .nav-active .material-symbols-outlined { font-variation-settings: 'opsz' 24, 'wght' 500, 'GRAD' 0, 'FILL' 1; }
