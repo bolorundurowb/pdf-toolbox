@@ -1,5 +1,9 @@
 # PDF Toolbox
 
+<p align="center">
+  <img src="assets/pdf-toolbox-logo.svg" alt="PDF Toolbox" width="128" />
+</p>
+
 [![Build](https://github.com/bolorundurowb/pdf-toolbox/actions/workflows/build.yml/badge.svg)](https://github.com/bolorundurowb/pdf-toolbox/actions/workflows/build.yml)
 
 A local, offline desktop app for everyday PDF work. Built with **Tauri 2** (Rust) and
