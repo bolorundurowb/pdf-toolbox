@@ -5,15 +5,9 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,100..1000&display=swap');
+
 /* ---- Self-hosted fonts (offline) ---- */
-@font-face { font-family:'Geist'; font-weight:400; font-style:normal; font-display:swap;
-  src:url('assets/fonts/Geist-Regular.woff2') format('woff2'); }
-@font-face { font-family:'Geist'; font-weight:500; font-style:normal; font-display:swap;
-  src:url('assets/fonts/Geist-Medium.woff2') format('woff2'); }
-@font-face { font-family:'Geist'; font-weight:600; font-style:normal; font-display:swap;
-  src:url('assets/fonts/Geist-SemiBold.woff2') format('woff2'); }
-@font-face { font-family:'Geist'; font-weight:700; font-style:normal; font-display:swap;
-  src:url('assets/fonts/Geist-Bold.woff2') format('woff2'); }
 @font-face { font-family:'JetBrains Mono'; font-weight:400; font-style:normal; font-display:swap;
   src:url('assets/fonts/JetBrainsMono-Regular.woff2') format('woff2'); }
 @font-face { font-family:'JetBrains Mono'; font-weight:500; font-style:normal; font-display:swap;
@@ -29,7 +23,7 @@
 @layer base {
   html, body { height: 100%; margin: 0; }
   body {
-    font-family: 'Geist', system-ui, -apple-system, sans-serif;
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow: hidden;
@@ -68,12 +62,12 @@
 .animate-fade-in { animation: fade-in .2s ease-out; }
 @keyframes pdfspin { to { transform: rotate(360deg); } }
 
-/* Active sidebar item: blue text, bold, left pill, container bg */
+/* Active sidebar item: teal text, bold, left pill, container bg */
 .nav-active {
-  color: #004ac6 !important;
+  color: #057a75 !important;
   font-weight: 700;
   background: #e7e7f3;
-  border-left: 4px solid #004ac6;
+  border-left: 4px solid #057a75;
   padding-left: calc(1rem - 4px);
 }
 .nav-active .material-symbols-outlined { font-variation-settings: 'opsz' 24, 'wght' 500, 'GRAD' 0, 'FILL' 1; }
