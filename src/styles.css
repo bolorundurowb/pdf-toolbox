@@ -68,9 +68,9 @@
 
 /* Active sidebar item: white pill, soft shadow, teal bold text, filled icon */
 .nav-active {
-  color: #057a75 !important;
+  color: rgb(var(--primary)) !important;
   font-weight: 700;
-  background: #ffffff;
+  background: rgb(var(--nav-active-bg));
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.04);
 }
 .nav-active .nav-icon { opacity: 1; }
@@ -84,3 +84,126 @@ body { zoom: 0.75; }
 /* Routed page hosts must fill the main panel so pages using h-full
    (e.g. Image to PDF's settings sidebar) stretch the full height. */
 main > :not(router-outlet) { display: block; height: 100%; min-height: 0; }
+
+/* =========================================================================
+   Theme tokens — light (default) + dark (system prefers-color-scheme).
+   Channel form (R G B) so Tailwind /opacity modifiers keep working.
+   ========================================================================= */
+:root {
+  color-scheme: light;
+  --surface: 246 250 249;
+  --surface-dim: 215 219 217;
+  --surface-bright: 246 250 249;
+  --surface-canvas: 248 250 250;
+  --surface-sidebar: 243 245 245;
+  --surface-container-lowest: 255 255 255;
+  --surface-container-low: 241 244 243;
+  --surface-container: 235 239 237;
+  --surface-container-high: 229 233 232;
+  --surface-container-highest: 223 227 226;
+  --on-surface: 24 28 28;
+  --on-surface-variant: 96 102 102;
+  --inverse-surface: 45 49 49;
+  --inverse-on-surface: 238 241 240;
+  --outline: 110 121 120;
+  --outline-variant: 189 201 199;
+  --border-subtle: 226 232 232;
+  --text-main: 26 28 28;
+  --text-muted: 96 102 102;
+  --surface-tint: 0 106 102;
+  --primary: 5 122 117;
+  --on-primary: 255 255 255;
+  --primary-container: 5 122 117;
+  --on-primary-container: 171 255 248;
+  --inverse-primary: 123 214 207;
+  --secondary: 229 9 20;
+  --on-secondary: 255 255 255;
+  --secondary-container: 232 15 22;
+  --on-secondary-container: 255 251 255;
+  --tertiary: 132 67 38;
+  --on-tertiary: 255 255 255;
+  --tertiary-container: 162 90 59;
+  --on-tertiary-container: 255 237 230;
+  --error: 186 26 26;
+  --on-error: 255 255 255;
+  --error-container: 255 218 214;
+  --on-error-container: 147 0 10;
+  --primary-fixed: 151 242 236;
+  --primary-fixed-dim: 123 214 207;
+  --on-primary-fixed: 0 32 30;
+  --on-primary-fixed-variant: 0 80 76;
+  --secondary-fixed: 255 218 213;
+  --secondary-fixed-dim: 255 180 170;
+  --on-secondary-fixed: 65 0 1;
+  --on-secondary-fixed-variant: 147 0 7;
+  --tertiary-fixed: 255 219 206;
+  --tertiary-fixed-dim: 255 181 152;
+  --on-tertiary-fixed: 55 14 0;
+  --on-tertiary-fixed-variant: 115 53 25;
+  --background: 246 250 249;
+  --on-background: 24 28 28;
+  --surface-variant: 223 227 226;
+  --nav-active-bg: 255 255 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --surface: 14 20 19;
+    --surface-dim: 11 16 15;
+    --surface-bright: 52 59 57;
+    --surface-canvas: 11 16 15;
+    --surface-sidebar: 21 27 26;
+    --surface-container-lowest: 22 29 27;
+    --surface-container-low: 30 37 35;
+    --surface-container: 35 43 41;
+    --surface-container-high: 42 50 47;
+    --surface-container-highest: 49 57 55;
+    --on-surface: 226 232 230;
+    --on-surface-variant: 170 179 177;
+    --inverse-surface: 226 232 230;
+    --inverse-on-surface: 27 34 33;
+    --outline: 137 147 144;
+    --outline-variant: 58 67 65;
+    --border-subtle: 51 59 57;
+    --text-main: 230 236 233;
+    --text-muted: 170 179 177;
+    --surface-tint: 123 214 207;
+    --primary: 95 212 204;
+    --on-primary: 0 32 30;
+    --primary-container: 0 80 76;
+    --on-primary-container: 151 242 236;
+    --inverse-primary: 5 122 117;
+    --secondary: 255 90 82;
+    --on-secondary: 255 255 255;
+    --secondary-container: 192 0 9;
+    --on-secondary-container: 255 251 255;
+    --tertiary: 255 181 152;
+    --on-tertiary: 82 33 0;
+    --tertiary-container: 102 53 21;
+    --on-tertiary-container: 255 219 206;
+    --error: 255 180 171;
+    --on-error: 105 0 5;
+    --error-container: 147 0 10;
+    --on-error-container: 255 218 214;
+    --primary-fixed: 151 242 236;
+    --primary-fixed-dim: 123 214 207;
+    --on-primary-fixed: 0 32 30;
+    --on-primary-fixed-variant: 0 80 76;
+    --secondary-fixed: 255 218 213;
+    --secondary-fixed-dim: 255 180 170;
+    --on-secondary-fixed: 65 0 1;
+    --on-secondary-fixed-variant: 147 0 7;
+    --tertiary-fixed: 255 219 206;
+    --tertiary-fixed-dim: 255 181 152;
+    --on-tertiary-fixed: 55 14 0;
+    --on-tertiary-fixed-variant: 255 181 152;
+    --background: 11 16 15;
+    --on-background: 226 232 230;
+    --surface-variant: 49 57 55;
+    --nav-active-bg: 35 43 41;
+  }
+}
+
+/* Avoid a white flash before the shell paints */
+html, body { background: rgb(var(--surface-canvas)); }
