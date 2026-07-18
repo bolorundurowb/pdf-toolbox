@@ -1,8 +1,9 @@
-# PDF Toolbox
 
 <p align="center">
   <img src="assets/pdf-toolbox-logo.svg" alt="PDF Toolbox" width="128" />
 </p>
+
+# PDF Toolbox
 
 [![Build](https://github.com/bolorundurowb/pdf-toolbox/actions/workflows/build.yml/badge.svg)](https://github.com/bolorundurowb/pdf-toolbox/actions/workflows/build.yml)
 
