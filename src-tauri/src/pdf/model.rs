@@ -72,7 +72,6 @@ pub struct ImagesOptions {
     pub margin: f64,
     /// JPEG quality 1-100.
     pub quality: u8,
-    pub optimize: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]

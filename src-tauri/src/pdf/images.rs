@@ -65,7 +65,6 @@ pub fn images_to_pdf(
             &options.orientation,
             options.margin,
         );
-        let _ = options.optimize;
 
         let ops = vec![
             Operation::new("q", vec![]),

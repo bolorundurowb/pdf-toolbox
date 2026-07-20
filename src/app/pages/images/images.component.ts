@@ -23,7 +23,6 @@ export class ImagesComponent {
   readonly orientation = signal<ImageOrientation>('auto');
   readonly margin = signal(20); // px→pt approximate
   readonly quality = signal(85);
-  readonly optimize = signal(true);
 
   readonly pageSizes: { id: ImagePageSize; label: string; hint: string }[] = [
     { id: 'a4', label: 'A4', hint: '210 × 297 mm' },
@@ -97,7 +96,7 @@ export class ImagesComponent {
     await this.runner.run((op) =>
       this.pdf.imagesToPdf(
         paths,
-        { pageSize: this.pageSize(), orientation: this.orientation(), margin: this.margin(), quality: this.quality(), optimize: this.optimize() },
+        { pageSize: this.pageSize(), orientation: this.orientation(), margin: this.margin(), quality: this.quality() },
         outDir, op,
       ),
     );

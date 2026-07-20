@@ -53,7 +53,6 @@ export interface ImagesOptions {
   margin: number;
   /** JPEG quality 1-100. */
   quality: number;
-  optimize: boolean;
 }
 
 export interface MergeOptions {
