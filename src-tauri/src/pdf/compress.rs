@@ -1,9 +1,6 @@
-//! Pure-Rust PDF compression.
-//!
-//! Most of a PDF's size is its raster images. We walk the object table, find
-//! JPEG (DCTDecode) image XObjects, downscale + re-encode them at a quality
-//! driven by the chosen level (optionally to grayscale), then flate-compress
-//! content streams and optionally strip metadata. No external tools required.
+//! Image recompression accounts for most of the size reduction because raster
+//! images typically dominate PDF file size. The approach is entirely in-process,
+//! avoiding any runtime dependency on external tools.
 
 use std::path::Path;
 
@@ -15,9 +12,8 @@ use super::model::{CompressOptions, OperationResult, OutputFile, Progress};
 use super::util::{file_size, stem, unique_path};
 
 struct Profile {
-    /// Longest-edge cap in pixels (None = don't downscale).
+    /// `None` means no downscaling — the image is re-encoded at its original size.
     max_dim: Option<u32>,
-    /// JPEG quality 1-100.
     quality: u8,
 }
 
@@ -29,7 +25,6 @@ fn profile(level: &str) -> Profile {
     }
 }
 
-/// Does this stream dictionary describe a JPEG (DCTDecode) image?
 fn is_jpeg_image(dict: &lopdf::Dictionary) -> bool {
     let is_image = dict
         .get(b"Subtype")
@@ -49,7 +44,6 @@ fn is_jpeg_image(dict: &lopdf::Dictionary) -> bool {
     }
 }
 
-/// Recompress all JPEG images in the document in place. Returns how many changed.
 pub fn recompress_images(doc: &mut Document, level: &str, grayscale: bool) -> u32 {
     let prof = profile(level);
     let ids: Vec<(u32, u16)> = doc.objects.keys().cloned().collect();
@@ -63,7 +57,6 @@ pub fn recompress_images(doc: &mut Document, level: &str, grayscale: bool) -> u3
         }
         let Ok(mut img) = image::load_from_memory(&stream.content) else { continue };
 
-        // Downscale if larger than the cap on its longest edge.
         if let Some(max) = prof.max_dim {
             let (w, h) = img.dimensions();
             if w.max(h) > max {
@@ -105,7 +98,6 @@ pub fn recompress_images(doc: &mut Document, level: &str, grayscale: bool) -> u3
     changed
 }
 
-/// Remove the document Info dictionary entries.
 fn strip_metadata(doc: &mut Document) {
     if let Ok(Object::Reference(id)) = doc.trailer.get(b"Info") {
         let id = *id;
@@ -166,7 +158,8 @@ pub fn compress_pdfs(
     Ok(OperationResult { files, out_dir })
 }
 
-/// Best-effort in-place optimization used by Merge's "optimize" toggle.
+/// Called after merge when the user enables the optimize toggle, so the merged
+/// output is compacted without requiring a separate compress pass.
 pub fn optimize_file(path: &Path) -> bool {
     let Ok(mut doc) = Document::load(path) else { return false };
     let changed = recompress_images(&mut doc, "balanced", false);

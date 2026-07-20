@@ -1,4 +1,5 @@
-//! Shared data types exchanged with the Angular frontend.
+//! Types shared with the Angular frontend — these cross the Tauri IPC boundary
+//! and must stay in sync with the TypeScript models.
 
 use serde::{Deserialize, Serialize};
 
@@ -77,6 +78,7 @@ pub struct ImagesOptions {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MergeOptions {
+    /// Recompresses images in the merged output to reduce file size.
     pub optimize: bool,
     #[serde(default)]
     pub output_name: Option<String>,

@@ -1,5 +1,4 @@
-//! PDF Toolbox — a local, offline suite: images→PDF, merge/split, compress,
-//! security, and metadata.
+//! Tauri command layer — bridges the Angular UI to the local PDF processing library.
 
 mod pdf;
 

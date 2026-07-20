@@ -1,4 +1,4 @@
-//! Local PDF/image processing. All work happens on-device; nothing is uploaded.
+//! All processing happens on-device; no user data is sent anywhere.
 
 pub mod compress;
 pub mod extract;

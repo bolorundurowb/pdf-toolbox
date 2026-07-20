@@ -14,13 +14,11 @@ const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp', '
 
 @Injectable({ providedIn: 'root' })
 export class PdfService {
-  /** Pick PDF files. */
   async pickPdfs(multiple = true): Promise<string[]> {
     const sel = await open({ multiple, directory: false, filters: [{ name: 'PDF', extensions: ['pdf'] }] });
     return this.toArray(sel);
   }
 
-  /** Pick image files. */
   async pickImages(multiple = true): Promise<string[]> {
     const sel = await open({ multiple, directory: false, filters: [{ name: 'Images', extensions: IMAGE_EXTS }] });
     return this.toArray(sel);

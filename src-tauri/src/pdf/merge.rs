@@ -1,8 +1,5 @@
-//! Merge several PDFs into one, preserving page order and page sizes.
-//!
-//! This is an adaptation of lopdf's well-known object-renumbering merge
-//! routine: every source document is renumbered into a shared id space, the
-//! Catalog/Pages objects are rebuilt, and every page is re-parented.
+//! Each source document is renumbered into a shared object-ID space so that
+//! internal references remain valid after the page trees are combined.
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -65,7 +62,6 @@ pub fn merge_pdfs(
         ));
     }
 
-    // Locate (or synthesise) the Catalog and Pages objects.
     let mut catalog_object: Option<(ObjectId, Object)> = None;
     let mut pages_object: Option<(ObjectId, Object)> = None;
 
@@ -100,7 +96,6 @@ pub fn merge_pdfs(
     let pages_object = pages_object.ok_or("No page tree found in the source PDFs.")?;
     let catalog_object = catalog_object.ok_or("No catalog found in the source PDFs.")?;
 
-    // Re-parent every page to the shared Pages node.
     for (object_id, object) in &documents_pages {
         if let Ok(dict) = object.as_dict() {
             let mut dict = dict.clone();
@@ -109,7 +104,6 @@ pub fn merge_pdfs(
         }
     }
 
-    // Rebuild the Pages node with all kids.
     if let Ok(dict) = pages_object.1.as_dict() {
         let mut dict = dict.clone();
         dict.set("Count", documents_pages.len() as u32);
@@ -125,7 +119,6 @@ pub fn merge_pdfs(
             .insert(pages_object.0, Object::Dictionary(dict));
     }
 
-    // Rebuild the Catalog.
     if let Ok(dict) = catalog_object.1.as_dict() {
         let mut dict = dict.clone();
         dict.set("Pages", pages_object.0);

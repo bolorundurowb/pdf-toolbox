@@ -7,7 +7,6 @@ use lopdf::{Dictionary, Document, Object, StringFormat};
 use super::model::{OperationResult, OutputFile, PdfMetadata};
 use super::util::{file_size, stem, unique_path};
 
-/// Decode a PDF text string (UTF-16BE with BOM, else Latin-1/UTF-8).
 fn decode_text(bytes: &[u8]) -> String {
     if bytes.len() >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF {
         let u16s: Vec<u16> = bytes[2..]
@@ -20,8 +19,7 @@ fn decode_text(bytes: &[u8]) -> String {
     }
 }
 
-/// Encode a string for a PDF text field. ASCII stays literal; anything else is
-/// written as UTF-16BE with a BOM so unicode round-trips.
+/// Non-ASCII strings are encoded as UTF-16BE with a BOM so they survive PDF round-trips.
 fn encode_text(s: &str) -> Object {
     if s.is_ascii() {
         Object::String(s.as_bytes().to_vec(), StringFormat::Literal)
@@ -78,7 +76,6 @@ pub fn set_metadata(path: &str, meta: PdfMetadata, out_dir: &str) -> Result<Oper
         (b"Creator", &meta.creator),
     ];
 
-    // Find an existing Info dictionary id, if any.
     let info_id = match doc.trailer.get(b"Info") {
         Ok(Object::Reference(id)) => Some(*id),
         _ => None,

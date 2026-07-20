@@ -1,9 +1,6 @@
-//! Rasterize PDF pages to images.
-//!
-//! Rendering a PDF page has no pure-Rust implementation, so this uses `pdfium`
-//! and is gated behind the optional `render` cargo feature. In the default
-//! build the command returns a friendly "not available" message; build with
-//! `--features render` (and bundle the pdfium library) to enable it.
+//! No pure-Rust PDF renderer exists, so rendering is delegated to pdfium and
+//! gated behind the optional `render` feature. Builds without the feature
+//! return a descriptive error rather than failing silently.
 
 use super::model::{OperationResult, Progress};
 use tauri::ipc::Channel;
@@ -24,7 +21,6 @@ pub fn pages_to_images(
     use super::model::OutputFile;
     use super::util::{file_size, stem, unique_path};
 
-    // Bind to the bundled pdfium library if present, else the system one.
     let bindings = lib_dir
         .and_then(|dir| {
             Pdfium::bind_to_library(Pdfium::pdfium_platform_library_name_at_path(&dir)).ok()

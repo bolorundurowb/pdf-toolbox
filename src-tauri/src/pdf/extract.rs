@@ -1,4 +1,5 @@
-//! Extract text content from a PDF (pure Rust, via lopdf).
+//! Lopdf's built-in content extraction avoids the native rendering dependency
+//! that rasterisation would require.
 
 use std::path::Path;
 

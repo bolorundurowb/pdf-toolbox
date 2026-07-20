@@ -1,9 +1,9 @@
-//! Small shared helpers: range parsing and output paths.
+//! Shared helpers for range parsing and safe output paths.
 
 use std::path::{Path, PathBuf};
 
-/// Parse a range string like "1-5, 8, 12-24" into inclusive 1-based ranges,
-/// clamped to `[1, max]`. Mirrors the frontend logic so previews match output.
+/// Matches the frontend's range-parsing logic so the page preview and the
+/// written output always agree.
 pub fn parse_ranges(text: &str, max: u32) -> Vec<(u32, u32)> {
     let mut out = Vec::new();
     for tok in text.split(',') {
@@ -31,7 +31,6 @@ pub fn parse_ranges(text: &str, max: u32) -> Vec<(u32, u32)> {
     out
 }
 
-/// Return the file stem (name without extension) or a fallback.
 pub fn stem(path: &Path) -> String {
     path.file_stem()
         .and_then(|s| s.to_str())
@@ -39,8 +38,6 @@ pub fn stem(path: &Path) -> String {
         .to_string()
 }
 
-/// Build a non-clobbering output path inside `dir` for `file_name`.
-/// If it exists, appends " (2)", " (3)", ... before the extension.
 pub fn unique_path(dir: &Path, file_name: &str) -> PathBuf {
     let candidate = dir.join(file_name);
     if !candidate.exists() {
@@ -68,7 +65,6 @@ pub fn unique_path(dir: &Path, file_name: &str) -> PathBuf {
     }
 }
 
-/// File size in bytes, or 0 if unreadable.
 pub fn file_size(path: &Path) -> u64 {
     std::fs::metadata(path).map(|m| m.len()).unwrap_or(0)
 }

@@ -4,7 +4,6 @@ export interface NavItem {
   route: string;
 }
 
-/** Sidebar navigation. */
 export const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
   { label: 'Image to PDF', icon: 'image', route: '/images' },

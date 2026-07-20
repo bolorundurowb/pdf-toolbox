@@ -1,4 +1,4 @@
-//! Reorder, rotate, and delete pages, producing a new PDF (pure Rust, lopdf).
+//! Reorder, rotate, and delete pages, producing a new PDF.
 
 use std::path::Path;
 
@@ -20,9 +20,8 @@ pub fn organize_pdf(
     let _ = on_progress.send(Progress::new(0, 1, "Reorganizing…"));
 
     let mut doc = Document::load(&path).map_err(|_| "Couldn't read this PDF.".to_string())?;
-    let page_map = doc.get_pages(); // 1-based page number → object id
+    let page_map = doc.get_pages(); // 1-based → object id
 
-    // Pages tree root from the catalog.
     let root_id = doc
         .catalog()
         .map_err(|_| "Invalid PDF (no catalog).".to_string())?
@@ -31,7 +30,6 @@ pub fn organize_pdf(
         .as_reference()
         .map_err(|_| "Invalid PDF (bad page tree).".to_string())?;
 
-    // Build the new ordered kids list, applying rotation + re-parenting.
     let mut kids: Vec<Object> = Vec::new();
     for op in &pages {
         let Some(&pid) = page_map.get(&op.source) else { continue };

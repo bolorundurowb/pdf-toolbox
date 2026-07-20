@@ -1,4 +1,5 @@
-//! Password protection via lopdf (pure Rust — no external tools).
+//! Encryption and decryption run entirely in-process — no system tools or
+//! shell-outs — so the operation works fully offline on any platform.
 
 use std::collections::BTreeMap;
 use std::path::Path;

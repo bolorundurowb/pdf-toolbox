@@ -1,4 +1,5 @@
-//! Reading metadata (size, page count, dimensions, validity) for files.
+//! Files are inspected upfront so the UI can surface page counts, image
+//! dimensions, and encryption or damage errors before any operation begins.
 
 use std::path::Path;
 

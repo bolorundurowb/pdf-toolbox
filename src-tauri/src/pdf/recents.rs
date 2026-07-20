@@ -5,7 +5,6 @@ use std::time::UNIX_EPOCH;
 
 use super::model::RecentFile;
 
-/// Return up to 20 most-recently-modified PDFs in `dir`, newest first.
 pub fn recent_outputs(dir: &str) -> Vec<RecentFile> {
     let path = Path::new(dir);
     let mut out: Vec<RecentFile> = Vec::new();

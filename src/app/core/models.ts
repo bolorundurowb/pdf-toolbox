@@ -56,7 +56,7 @@ export interface ImagesOptions {
 }
 
 export interface MergeOptions {
-  /** Run a pure-Rust compression pass on the merged output. */
+  /** Recompresses images in the merged output to reduce file size. */
   optimize: boolean;
   outputName?: string;
 }

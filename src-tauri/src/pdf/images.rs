@@ -1,8 +1,5 @@
-//! Combine images into a single PDF.
-//!
-//! Each image is re-encoded to JPEG and embedded as a DCTDecode XObject, then
-//! placed (aspect-preserving, centered) on a page whose size/orientation is
-//! driven by the user's options.
+//! Images are re-encoded to JPEG before embedding so the output uses a single,
+//! predictable decode filter (DCTDecode) regardless of the source format.
 
 use std::path::Path;
 
@@ -37,7 +34,6 @@ pub fn images_to_pdf(
         let rgb = img.to_rgb8();
         let (w, h) = rgb.dimensions();
 
-        // Re-encode to JPEG for a compact DCTDecode stream.
         let mut jpeg = Vec::new();
         {
             let mut enc = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut jpeg, options.quality.clamp(10, 100));
@@ -89,7 +85,6 @@ pub fn images_to_pdf(
             content.encode().map_err(|e| format!("Content error: {e}"))?,
         ));
 
-        // Resources
         let mut xobjects = Dictionary::new();
         xobjects.set("Im0", Object::Reference(img_id));
         let mut resources = Dictionary::new();
@@ -147,8 +142,7 @@ fn load_image(path: &str) -> Result<DynamicImage, String> {
     image::open(p).map_err(|e| format!("Couldn't read {}: {e}", short(path)))
 }
 
-/// Compute page + image-placement geometry in PDF points.
-/// Returns (page_w, page_h, draw_x, draw_y, draw_w, draw_h).
+/// Returns `(page_w, page_h, draw_x, draw_y, draw_w, draw_h)` in PDF points.
 fn layout(
     px_w: u32,
     px_h: u32,
