@@ -2,7 +2,6 @@
 
 pub mod compress;
 pub mod extract;
-pub mod heic;
 pub mod images;
 pub mod inspect;
 pub mod merge;

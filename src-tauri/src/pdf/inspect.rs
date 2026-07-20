@@ -2,12 +2,11 @@
 
 use std::path::Path;
 
-use super::heic;
 use super::model::FileInfo;
 use super::util::file_size;
 
 const IMAGE_EXTS: &[&str] = &[
-    "jpg", "jpeg", "png", "gif", "bmp", "tiff", "tif", "webp", "heic", "heif",
+    "jpg", "jpeg", "png", "gif", "bmp", "tiff", "tif", "webp",
 ];
 
 pub fn inspect_files(paths: Vec<String>) -> Vec<FileInfo> {
@@ -63,14 +62,8 @@ fn inspect_pdf(path_str: &str) -> FileInfo {
     info
 }
 
-fn inspect_image(path_str: &str, ext: &str) -> FileInfo {
+fn inspect_image(path_str: &str, _ext: &str) -> FileInfo {
     let mut info = base(path_str, "image");
-    if ext == "heic" || ext == "heif" {
-        if !heic::helper_available() {
-            info.error = Some("HEIC needs the image helper (see README).".to_string());
-        }
-        return info;
-    }
     match image::image_dimensions(Path::new(path_str)) {
         Ok((w, h)) => {
             info.width = Some(w);

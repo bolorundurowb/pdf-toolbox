@@ -1,11 +1,12 @@
 /* =========================================================================
    PDF Toolbox - global styles (Tailwind + Material 3 tokens, offline)
    ========================================================================= */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,100..1000&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,100..1000&display=swap');
 
 /* ---- Self-hosted fonts (offline) ---- */
 @font-face { font-family:'JetBrains Mono'; font-weight:400; font-style:normal; font-display:swap;

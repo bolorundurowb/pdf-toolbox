@@ -2,8 +2,7 @@
 //!
 //! Each image is re-encoded to JPEG and embedded as a DCTDecode XObject, then
 //! placed (aspect-preserving, centered) on a page whose size/orientation is
-//! driven by the user's options. HEIC/HEIF are routed through an external
-//! helper (see `heic`).
+//! driven by the user's options.
 
 use std::path::Path;
 
@@ -12,7 +11,6 @@ use lopdf::content::{Content, Operation};
 use lopdf::{dictionary, Dictionary, Document, Object, Stream};
 use tauri::ipc::Channel;
 
-use super::heic;
 use super::model::{ImagesOptions, OperationResult, OutputFile, Progress};
 use super::util::{file_size, unique_path};
 
@@ -30,13 +28,12 @@ pub fn images_to_pdf(
     let mut doc = Document::with_version("1.5");
     let pages_id = doc.new_object_id();
 
-    let tmp_dir = std::env::temp_dir();
     let mut page_ids: Vec<Object> = Vec::new();
 
     for (i, path) in paths.iter().enumerate() {
         let _ = on_progress.send(Progress::new(i as u32, total, format!("Adding {}", short(path))));
 
-        let img = load_image(path, &tmp_dir)?;
+        let img = load_image(path)?;
         let rgb = img.to_rgb8();
         let (w, h) = rgb.dimensions();
 
@@ -146,21 +143,9 @@ pub fn images_to_pdf(
     })
 }
 
-fn load_image(path: &str, tmp_dir: &Path) -> Result<DynamicImage, String> {
+fn load_image(path: &str) -> Result<DynamicImage, String> {
     let p = Path::new(path);
-    let ext = p
-        .extension()
-        .and_then(|s| s.to_str())
-        .unwrap_or("")
-        .to_lowercase();
-    if ext == "heic" || ext == "heif" {
-        let png = heic::convert_to_png(p, tmp_dir)?;
-        let img = image::open(&png).map_err(|e| format!("Couldn't read {}: {e}", short(path)))?;
-        let _ = std::fs::remove_file(&png);
-        Ok(img)
-    } else {
-        image::open(p).map_err(|e| format!("Couldn't read {}: {e}", short(path)))
-    }
+    image::open(p).map_err(|e| format!("Couldn't read {}: {e}", short(path)))
 }
 
 /// Compute page + image-placement geometry in PDF points.
