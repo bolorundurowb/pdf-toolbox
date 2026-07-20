@@ -13,24 +13,31 @@ your computer.
 
 ## Features
 
-| Page              | What it does                                                                | Engine         |
-|-------------------|-----------------------------------------------------------------------------|----------------|
-| **Dashboard**     | Quick actions + recent output files from your save folder                   | filesystem     |
-| **Image to PDF**  | Combine JPG/PNG/TIFF/HEIC into one PDF (size, orientation, margin, quality) | lopdf + image  |
-| **Merge / Split** | Merge (drag-reorder) or split by ranges / max file size                     | lopdf          |
-| **Organize**      | Reorder, rotate, and delete pages → new PDF                                 | lopdf          |
-| **Compress**      | Shrink PDFs (Low / Recommended / Extreme, grayscale, strip metadata)        | lopdf          |
-| **Extract**       | Text → `.txt` (pure Rust); pages → PNG/JPG (pdfium, optional)               | lopdf / pdfium |
-| **Security**      | Add password (AES-256/128, RC4) or remove a known password                  | lopdf          |
-| **Metadata**      | View / edit Title, Author, Subject, Keywords, Creator                       | lopdf          |
+| Page              | What it does                                                                | Engine                  |
+|-------------------|-----------------------------------------------------------------------------|-------------------------|
+| **Dashboard**     | Quick actions + recent output files from your save folder                   | filesystem              |
+| **Image to PDF**  | Combine JPG/PNG/TIFF/HEIC into one PDF (size, orientation, margin, quality) | lopdf + image + libheif |
+| **Merge / Split** | Merge (drag-reorder) or split by ranges / max file size                     | lopdf                   |
+| **Organize**      | Reorder, rotate, and delete pages → new PDF                                 | lopdf                   |
+| **Compress**      | Shrink PDFs (Low / Recommended / Extreme, grayscale, strip metadata)        | lopdf                   |
+| **Extract**       | Text → `.txt` (pure Rust); pages → PNG/JPG (pdfium, optional)               | lopdf / pdfium          |
+| **Security**      | Add password (AES-256/128, RC4) or remove a known password                  | lopdf                   |
+| **Metadata**      | View / edit Title, Author, Subject, Keywords, Creator                       | lopdf                   |
 
-All core PDF tools are **pure Rust** via [lopdf](https://github.com/J-F-Liu/lopdf). The only
-optional native dependency is pdfium for page-to-image export (off by default).
+All core PDF tools are **pure Rust** via [lopdf](https://github.com/J-F-Liu/lopdf). No feature
+shells out to an external app at runtime. Two features use native libraries compiled into
+the binary: **libheif** (HEIC/HEIF decoding, always built in) and **pdfium** (page-to-image
+export, optional and off by default). Link both statically for a fully self-contained app.
 
 ## Prerequisites
 
 - **Node.js** 18+ and npm
 - **Rust** stable and [Tauri 2 system dependencies](https://v2.tauri.app/start/prerequisites/)
+- **libheif** development library, for HEIC/HEIF support (linked at build time)
+  - macOS: `brew install libheif` · Debian/Ubuntu: `apt install libheif-dev`
+  - Windows: `vcpkg install libheif` (use a static triplet, e.g. `x64-windows-static-md`)
+  - For a self-contained binary that needs nothing installed on the user's machine,
+    link libheif **statically** (a static libheif + libde265 in the build environment).
 
 ## Quick start
 
@@ -108,7 +115,7 @@ enable **Read and write permissions** so the release action can publish assets.
 src/app/
   app.component.*     Shell (sidebar + top bar)
   app.routes.ts       Hash routing → 8 tool pages
-  core/               models, pdf.service, runner, nav + tool config
+  core/               models, pdf.service, runner, nav config
   shared/             process-status panel
   pages/              dashboard, images, merge-split, organize, compress,
                       extract, security, metadata
@@ -125,7 +132,6 @@ src-tauri/
   exact per-part byte sizing would require rendering.
 - Text extraction depends on the PDF — scanned/image-only PDFs have no extractable
   text (OCR is not bundled).
-- A few unused legacy asset files may remain under `src/assets/`; safe to delete.
 
 ## License
 
