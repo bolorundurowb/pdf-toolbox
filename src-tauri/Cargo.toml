@@ -1,8 +1,8 @@
 [package]
 name = "pdf-toolbox"
-version = "0.1.1"
+version = "0.2.0"
 description = "A local, offline PDF tools suite"
-authors = ["you"]
+authors = ["Winner-Timothy Bolorunduro"]
 edition = "2021"
 
 [lib]
