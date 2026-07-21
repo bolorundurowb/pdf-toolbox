@@ -1,137 +1,61 @@
-
 <p align="center">
   <img src="assets/pdf-toolbox-logo.svg" alt="PDF Toolbox" width="128" />
 </p>
 
 # PDF Toolbox
 
-[![Build](https://github.com/bolorundurowb/pdf-toolbox/actions/workflows/build.yml/badge.svg)](https://github.com/bolorundurowb/pdf-toolbox/actions/workflows/build.yml)
-
-A local, offline desktop app for everyday PDF work. Built with **Tauri 2** (Rust) and
-**Angular 22** (Material-3 / Tailwind). Everything runs on-device — no file leaves
-your computer.
+A local, offline desktop app for everyday PDF work. Everything runs on your
+computer — no uploads, no cloud, no account.
 
 ## Features
 
-| Page              | What it does                                                                | Engine                  |
-|-------------------|-----------------------------------------------------------------------------|-------------------------|
-| **Dashboard**     | Quick actions + recent output files from your save folder                   | filesystem              |
-| **Image to PDF**  | Combine JPG/PNG/TIFF/HEIC into one PDF (size, orientation, margin, quality) | lopdf + image + libheif |
-| **Merge / Split** | Merge (drag-reorder) or split by ranges / max file size                     | lopdf                   |
-| **Organize**      | Reorder, rotate, and delete pages → new PDF                                 | lopdf                   |
-| **Compress**      | Shrink PDFs (Low / Recommended / Extreme, grayscale, strip metadata)        | lopdf                   |
-| **Extract**       | Text → `.txt` (pure Rust); pages → PNG/JPG (pdfium, optional)               | lopdf / pdfium          |
-| **Security**      | Add password (AES-256/128, RC4) or remove a known password                  | lopdf                   |
-| **Metadata**      | View / edit Title, Author, Subject, Keywords, Creator                       | lopdf                   |
+| Tool              | What it does                                                                              |
+|-------------------|-------------------------------------------------------------------------------------------|
+| **Dashboard**     | Quick actions and recent files from your output folder                                    |
+| **Image to PDF**  | Combine JPG, PNG, TIFF, or HEIC into one PDF (page size, orientation, margin, quality)    |
+| **Merge / Split** | Merge PDFs (drag to reorder) or split by page ranges or max file size                     |
+| **Organize**      | Reorder, rotate, or delete pages and save a new PDF                                       |
+| **Compress**      | Shrink PDFs (Low / Recommended / Extreme), optional grayscale and strip metadata          |
+| **Extract**       | Pull text to a `.txt` file, or export pages as PNG/JPG (when page rendering is available) |
+| **Security**      | Add a password (AES-256, AES-128, or RC4) or remove one you already know                  |
+| **Metadata**      | View and edit Title, Author, Subject, Keywords, and Creator                               |
 
-All core PDF tools are **pure Rust** via [lopdf](https://github.com/J-F-Liu/lopdf). No feature
-shells out to an external app at runtime. Two features use native libraries compiled into
-the binary: **libheif** (HEIC/HEIF decoding, always built in) and **pdfium** (page-to-image
-export, optional and off by default). Link both statically for a fully self-contained app.
+## Install
 
-## Prerequisites
+Download the installer for your platform from
+[Releases](https://github.com/bolorundurowb/pdf-toolbox/releases).
 
-- **Node.js** 18+ and npm
-- **Rust** stable and [Tauri 2 system dependencies](https://v2.tauri.app/start/prerequisites/)
-- **libheif** development library, for HEIC/HEIF support (linked at build time)
-  - macOS: `brew install libheif` · Debian/Ubuntu: `apt install libheif-dev`
-  - Windows: `vcpkg install libheif` (use a static triplet, e.g. `x64-windows-static-md`)
-  - For a self-contained binary that needs nothing installed on the user's machine,
-    link libheif **statically** (a static libheif + libde265 in the build environment).
+| Platform    | What to get                                        |
+|-------------|----------------------------------------------------|
+| **Windows** | `.msi` or `.exe` installer                         |
+| **macOS**   | `.dmg` (Apple Silicon or Intel, matching your Mac) |
+| **Linux**   | `.deb`, `.rpm`, or `.AppImage`                     |
 
-## Quick start
+Install as usual for your OS, then open **PDF Toolbox** from your apps menu
+or Start menu.
 
-```bash
-git clone https://github.com/bolorundurowb/pdf-toolbox.git
-cd pdf-toolbox
-npm install
-npm run tauri dev
-```
+## How to use
 
-## Build locally
+1. Open the tool you need from the sidebar (or a quick action on the Dashboard).
+2. Add one or more files with **Add files** (or drag and drop where supported).
+3. Adjust options in the panel (page size, passwords, compression level, etc.).
+4. Run the action. Progress shows in the status view.
+5. When it finishes, open the result file or its folder from the status panel.
 
-```bash
-npm install
-npm run build          # Angular production build
-npm run tauri build    # Desktop installer / bundle
-```
+Outputs are saved under your Documents folder in **PDF Toolbox** by default
+(you can change the destination when prompted).
 
-Installers and bundles are written under `src-tauri/target/release/bundle/`.
+### Tips
 
-### Optional: page rendering (pdfium)
+- **Merge** — drag items in the list to change order before merging.
+- **Merge → Optimize output** — recompresses the result to reduce size.
+- **Organize** — pages are shown as numbered tiles; reorder, rotate, or remove, then save.
+- **Security** — keep a copy of the password; locked PDFs cannot be recovered without it.
+- **Extract text** — works on PDFs that contain real text. Scanned image-only PDFs have nothing to extract (OCR is not included).
 
-**Extract → Pages as Images** is the one feature that still needs a native library, and
-only when built with the `render` Cargo feature (off by default):
+## Privacy
 
-```bash
-# place the platform library in src-tauri/resources/pdfium/ (see that README)
-npm run tauri build -- --features render
-```
-
-Prebuilt binaries: [bblanchon/pdfium-binaries](https://github.com/bblanchon/pdfium-binaries/releases).
-
-Without pdfium, text extraction and every other tool work normally.
-
-## How compression works
-
-Compression walks the PDF object table, finds JPEG (DCTDecode) image XObjects,
-downsamples and re-encodes them at a quality driven by the chosen level (optionally to
-grayscale), strips metadata when asked, and flate-compresses content streams. The
-result is kept only if it is actually smaller. Merge's **Optimize output** toggle
-reuses the same code.
-
-## CI / releases
-
-### Build workflow
-
-[`build.yml`](.github/workflows/build.yml) runs on pushes and pull requests to
-`main`/`master`, and can be triggered manually from the Actions tab. It:
-
-1. Builds the Angular frontend on Ubuntu
-2. Compiles the Rust backend on Ubuntu, Windows, and macOS
-
-### Release workflow
-
-[`release.yml`](.github/workflows/release.yml) is **on-demand only**
-(`workflow_dispatch`). From **Actions → Release → Run workflow** you can set:
-
-| Input             | Default                             | Purpose                                              |
-|-------------------|-------------------------------------|------------------------------------------------------|
-| **tag**           | `v<version>` from `tauri.conf.json` | Git tag and GitHub Release name                      |
-| **draft**         | `true`                              | Keep the release unpublished until you review assets |
-| **prerelease**    | `false`                             | Mark as pre-release                                  |
-| **enable_render** | `false`                             | Build with the pdfium `render` feature               |
-
-The workflow builds for **Windows x64**, **Linux x64**, **macOS Intel**, and
-**macOS Apple Silicon**, then uploads installers to a
-[new GitHub Release](https://github.com/bolorundurowb/pdf-toolbox/releases).
-
-**Repository setting:** under **Settings → Actions → General → Workflow permissions**,
-enable **Read and write permissions** so the release action can publish assets.
-
-## Project layout
-
-```
-src/app/
-  app.component.*     Shell (sidebar + top bar)
-  app.routes.ts       Hash routing → 8 tool pages
-  core/               models, pdf.service, runner, nav config
-  shared/             process-status panel
-  pages/              dashboard, images, merge-split, organize, compress,
-                      extract, security, metadata
-src-tauri/
-  src/pdf/            Rust PDF engines (see feature table above)
-  resources/pdfium/   Optional pdfium library for page rendering
-```
-
-## Notes
-
-- **Organize** shows numbered page tiles, not rendered thumbnails (thumbnails would
-  need pdfium).
-- **Split by size** distributes pages evenly into `ceil(fileSize / maxMB)` parts;
-  exact per-part byte sizing would require rendering.
-- Text extraction depends on the PDF — scanned/image-only PDFs have no extractable
-  text (OCR is not bundled).
+PDF Toolbox never sends your files anywhere. Processing stays on your machine.
 
 ## License
 

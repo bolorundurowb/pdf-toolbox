@@ -3,20 +3,11 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      tag:
-        description: 'Git tag for the release (default: v<app version> from tauri.conf.json)'
-        required: false
-        type: string
       draft:
         description: 'Create as a draft release'
         required: false
         type: boolean
         default: true
-      prerelease:
-        description: 'Mark as a pre-release'
-        required: false
-        type: boolean
-        default: false
       enable_render:
         description: 'Enable the pdfium render feature (Extract → pages as images)'
         required: false
@@ -31,8 +22,48 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  prepare:
+    name: Resolve version
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      tag: ${{ steps.meta.outputs.tag }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version from package.json
+        id: meta
+        run: |
+          VERSION=$(jq -r .version package.json)
+          if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
+            echo "Could not read version from package.json" >&2
+            exit 1
+          fi
+
+          TAG="v${VERSION}"
+
+          # Pre-release if the version contains an alpha, beta, or dev identifier
+          # (e.g. 1.0.0-alpha.1, 0.3.0-beta, 0.2.0-dev).
+          if echo "$VERSION" | grep -qiE '(^|[.+-])(alpha|beta|dev)([.+-]|$)'; then
+            PRERELEASE=true
+          else
+            PRERELEASE=false
+          fi
+
+          {
+            echo "version=${VERSION}"
+            echo "tag=${TAG}"
+            echo "prerelease=${PRERELEASE}"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Version: ${VERSION}"
+          echo "Tag: ${TAG}"
+          echo "Prerelease: ${PRERELEASE}"
+
   publish:
     name: Build (${{ matrix.platform }})
+    needs: prepare
     strategy:
       fail-fast: false
       matrix:
@@ -97,15 +128,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ inputs.tag || 'v__VERSION__' }}
-          releaseName: PDF Toolbox v__VERSION__
+          tagName: ${{ needs.prepare.outputs.tag }}
+          releaseName: PDF Toolbox v${{ needs.prepare.outputs.version }}
           releaseBody: |
             See the assets below to download and install this version.
 
+            **Version:** ${{ needs.prepare.outputs.version }}
             **Platforms:** Windows (x64), Linux (x64), macOS (Intel + Apple Silicon)
 
             Page-to-image export requires building with the `render` feature and a
             pdfium library (not included by default). All other tools are pure Rust.
           releaseDraft: ${{ inputs.draft }}
-          prerelease: ${{ inputs.prerelease }}
+          prerelease: ${{ needs.prepare.outputs.prerelease == 'true' }}
           args: ${{ format('{0}{1}', matrix.args, inputs.enable_render && ' --features render' || '') }}
