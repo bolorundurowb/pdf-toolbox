@@ -110,10 +110,6 @@
           </div>
           <input type="range" min="10" max="100" [value]="quality()" (input)="quality.set(+$any($event.target).value)"
                  class="w-full accent-primary h-2 bg-outline-variant rounded-lg appearance-none cursor-pointer" />
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" [checked]="optimize()" (change)="optimize.set($any($event.target).checked)" class="rounded border-outline-variant accent-primary" />
-            <span class="text-body-md text-on-surface-variant">Optimise file size</span>
-          </label>
         </div>
       </div>
       <div class="p-6 bg-surface-container border-t border-outline-variant">
