@@ -1,6 +1,3 @@
-/* =========================================================================
-   PDF Toolbox - global styles (Tailwind + Material 3 tokens, offline)
-   ========================================================================= */
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,100..1000&display=swap');
 
 @tailwind base;
@@ -8,185 +5,190 @@
 @tailwind utilities;
 
 
-/* ---- Self-hosted fonts (offline) ---- */
-@font-face { font-family:'JetBrains Mono'; font-weight:400; font-style:normal; font-display:swap;
-  src:url('assets/fonts/JetBrainsMono-Regular.woff2') format('woff2'); }
-@font-face { font-family:'JetBrains Mono'; font-weight:500; font-style:normal; font-display:swap;
-  src:url('assets/fonts/JetBrainsMono-Medium.woff2') format('woff2'); }
 @font-face {
-  font-family: 'Material Symbols Outlined';
-  font-style: normal;
-  font-weight: 100 700;
-  font-display: block;
-  src: url('assets/material-symbols/material-symbols-outlined.woff2') format('woff2');
+    font-family: 'JetBrains Mono';
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+    src: url('assets/fonts/JetBrainsMono-Regular.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'JetBrains Mono';
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+    src: url('assets/fonts/JetBrainsMono-Medium.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Material Symbols Outlined';
+    font-style: normal;
+    font-weight: 100 700;
+    font-display: block;
+    src: url('assets/material-symbols/material-symbols-outlined.woff2') format('woff2');
 }
 
 @layer base {
-  html, body { height: 100%; margin: 0; }
-  body {
-    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    overflow: hidden;
-  }
+    html, body {
+        height: 100%;
+        margin: 0;
+    }
+
+    body {
+        font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        overflow: hidden;
+    }
 }
 
 /* Material Symbols glyph helper */
 .material-symbols-outlined {
-  font-family: 'Material Symbols Outlined';
-  font-weight: normal;
-  font-style: normal;
-  line-height: 1;
-  letter-spacing: normal;
-  text-transform: none;
-  display: inline-flex;
-  white-space: nowrap;
-  word-wrap: normal;
-  direction: ltr;
-  font-feature-settings: 'liga';
-  -webkit-font-smoothing: antialiased;
-  user-select: none;
-  font-variation-settings: 'opsz' 24, 'wght' 400, 'GRAD' 0, 'FILL' 0;
-  vertical-align: middle;
+    font-family: 'Material Symbols Outlined';
+    font-weight: normal;
+    font-style: normal;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-flex;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+    font-variation-settings: 'opsz' 24, 'wght' 400, 'GRAD' 0, 'FILL' 0;
+    vertical-align: middle;
 }
-.material-symbols-outlined.fill { font-variation-settings: 'opsz' 24, 'wght' 400, 'GRAD' 0, 'FILL' 1; }
+
+.material-symbols-outlined.fill {
+    font-variation-settings: 'opsz' 24, 'wght' 400, 'GRAD' 0, 'FILL' 1;
+}
 
 /* Scrollbars */
-.custom-scrollbar::-webkit-scrollbar, ::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb {
-  background: var(--tw-scrollbar, #c3c6d7);
-  border-radius: 999px; border: 3px solid transparent; background-clip: content-box;
+.custom-scrollbar::-webkit-scrollbar, ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
 }
-::-webkit-scrollbar-thumb:hover { background: #a6a9bb; background-clip: content-box; }
 
-@keyframes fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-.animate-fade-in { animation: fade-in .2s ease-out; }
-@keyframes pdfspin { to { transform: rotate(360deg); } }
+::-webkit-scrollbar-thumb {
+    background: var(--tw-scrollbar, #c3c6d7);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a6a9bb;
+    background-clip: content-box;
+}
+
+@keyframes fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.animate-fade-in {
+    animation: fade-in .2s ease-out;
+}
+
+@keyframes pdfspin {
+    to {
+        transform: rotate(360deg);
+    }
+}
 
 /* Sidebar nav: inactive icons are dimmed, brighten on hover */
-.nav-icon { opacity: 0.6; transition: opacity .15s ease; }
-.nav-item:hover .nav-icon { opacity: 1; }
+.nav-icon {
+    opacity: 0.6;
+    transition: opacity .15s ease;
+}
+
+.nav-item:hover .nav-icon {
+    opacity: 1;
+}
 
 /* Active sidebar item: white pill, soft shadow, teal bold text, filled icon */
 .nav-active {
-  color: rgb(var(--primary)) !important;
-  font-weight: 700;
-  background: rgb(var(--nav-active-bg));
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.04);
+    color: rgb(var(--primary)) !important;
+    font-weight: 700;
+    background: rgb(var(--nav-active-bg));
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.04);
 }
-.nav-active .nav-icon { opacity: 1; }
-.nav-active .material-symbols-outlined { font-variation-settings: 'opsz' 24, 'wght' 500, 'GRAD' 0, 'FILL' 1; }
+
+.nav-active .nav-icon {
+    opacity: 1;
+}
+
+.nav-active .material-symbols-outlined {
+    font-variation-settings: 'opsz' 24, 'wght' 500, 'GRAD' 0, 'FILL' 1;
+}
 
 /* Global UI scale — render the whole app 25% smaller.
    Zoom lives on <body>; the layout shell uses 133.334vh/vw so that after the
    0.75 zoom it fills the window exactly (no blank strip, nothing cut off). */
-body { zoom: 0.75; }
+body {
+    zoom: 0.75;
+}
 
 /* Routed page hosts must fill the main panel so pages using h-full
    (e.g. Image to PDF's settings sidebar) stretch the full height. */
-main > :not(router-outlet) { display: block; height: 100%; min-height: 0; }
+main > :not(router-outlet) {
+    display: block;
+    height: 100%;
+    min-height: 0;
+}
 
 /* =========================================================================
    Theme tokens — light (default) + dark (system prefers-color-scheme).
    Channel form (R G B) so Tailwind /opacity modifiers keep working.
    ========================================================================= */
 :root {
-  color-scheme: light;
-  --surface: 246 250 249;
-  --surface-dim: 215 219 217;
-  --surface-bright: 246 250 249;
-  --surface-canvas: 248 250 250;
-  --surface-sidebar: 243 245 245;
-  --surface-container-lowest: 255 255 255;
-  --surface-container-low: 241 244 243;
-  --surface-container: 235 239 237;
-  --surface-container-high: 229 233 232;
-  --surface-container-highest: 223 227 226;
-  --on-surface: 24 28 28;
-  --on-surface-variant: 96 102 102;
-  --inverse-surface: 45 49 49;
-  --inverse-on-surface: 238 241 240;
-  --outline: 110 121 120;
-  --outline-variant: 189 201 199;
-  --border-subtle: 226 232 232;
-  --text-main: 26 28 28;
-  --text-muted: 96 102 102;
-  --surface-tint: 0 106 102;
-  --primary: 5 122 117;
-  --on-primary: 255 255 255;
-  --primary-container: 5 122 117;
-  --on-primary-container: 171 255 248;
-  --inverse-primary: 123 214 207;
-  --secondary: 229 9 20;
-  --on-secondary: 255 255 255;
-  --secondary-container: 232 15 22;
-  --on-secondary-container: 255 251 255;
-  --tertiary: 132 67 38;
-  --on-tertiary: 255 255 255;
-  --tertiary-container: 162 90 59;
-  --on-tertiary-container: 255 237 230;
-  --error: 186 26 26;
-  --on-error: 255 255 255;
-  --error-container: 255 218 214;
-  --on-error-container: 147 0 10;
-  --primary-fixed: 151 242 236;
-  --primary-fixed-dim: 123 214 207;
-  --on-primary-fixed: 0 32 30;
-  --on-primary-fixed-variant: 0 80 76;
-  --secondary-fixed: 255 218 213;
-  --secondary-fixed-dim: 255 180 170;
-  --on-secondary-fixed: 65 0 1;
-  --on-secondary-fixed-variant: 147 0 7;
-  --tertiary-fixed: 255 219 206;
-  --tertiary-fixed-dim: 255 181 152;
-  --on-tertiary-fixed: 55 14 0;
-  --on-tertiary-fixed-variant: 115 53 25;
-  --background: 246 250 249;
-  --on-background: 24 28 28;
-  --surface-variant: 223 227 226;
-  --nav-active-bg: 255 255 255;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --surface: 14 20 19;
-    --surface-dim: 11 16 15;
-    --surface-bright: 52 59 57;
-    --surface-canvas: 11 16 15;
-    --surface-sidebar: 21 27 26;
-    --surface-container-lowest: 22 29 27;
-    --surface-container-low: 30 37 35;
-    --surface-container: 35 43 41;
-    --surface-container-high: 42 50 47;
-    --surface-container-highest: 49 57 55;
-    --on-surface: 226 232 230;
-    --on-surface-variant: 170 179 177;
-    --inverse-surface: 226 232 230;
-    --inverse-on-surface: 27 34 33;
-    --outline: 137 147 144;
-    --outline-variant: 58 67 65;
-    --border-subtle: 51 59 57;
-    --text-main: 230 236 233;
-    --text-muted: 170 179 177;
-    --surface-tint: 123 214 207;
-    --primary: 95 212 204;
-    --on-primary: 0 32 30;
-    --primary-container: 0 80 76;
-    --on-primary-container: 151 242 236;
-    --inverse-primary: 5 122 117;
-    --secondary: 255 90 82;
+    color-scheme: light;
+    --surface: 246 250 249;
+    --surface-dim: 215 219 217;
+    --surface-bright: 246 250 249;
+    --surface-canvas: 248 250 250;
+    --surface-sidebar: 243 245 245;
+    --surface-container-lowest: 255 255 255;
+    --surface-container-low: 241 244 243;
+    --surface-container: 235 239 237;
+    --surface-container-high: 229 233 232;
+    --surface-container-highest: 223 227 226;
+    --on-surface: 24 28 28;
+    --on-surface-variant: 96 102 102;
+    --inverse-surface: 45 49 49;
+    --inverse-on-surface: 238 241 240;
+    --outline: 110 121 120;
+    --outline-variant: 189 201 199;
+    --border-subtle: 226 232 232;
+    --text-main: 26 28 28;
+    --text-muted: 96 102 102;
+    --surface-tint: 0 106 102;
+    --primary: 5 122 117;
+    --on-primary: 255 255 255;
+    --primary-container: 5 122 117;
+    --on-primary-container: 171 255 248;
+    --inverse-primary: 123 214 207;
+    --secondary: 229 9 20;
     --on-secondary: 255 255 255;
-    --secondary-container: 192 0 9;
+    --secondary-container: 232 15 22;
     --on-secondary-container: 255 251 255;
-    --tertiary: 255 181 152;
-    --on-tertiary: 82 33 0;
-    --tertiary-container: 102 53 21;
-    --on-tertiary-container: 255 219 206;
-    --error: 255 180 171;
-    --on-error: 105 0 5;
-    --error-container: 147 0 10;
-    --on-error-container: 255 218 214;
+    --tertiary: 132 67 38;
+    --on-tertiary: 255 255 255;
+    --tertiary-container: 162 90 59;
+    --on-tertiary-container: 255 237 230;
+    --error: 186 26 26;
+    --on-error: 255 255 255;
+    --error-container: 255 218 214;
+    --on-error-container: 147 0 10;
     --primary-fixed: 151 242 236;
     --primary-fixed-dim: 123 214 207;
     --on-primary-fixed: 0 32 30;
@@ -198,13 +200,73 @@ main > :not(router-outlet) { display: block; height: 100%; min-height: 0; }
     --tertiary-fixed: 255 219 206;
     --tertiary-fixed-dim: 255 181 152;
     --on-tertiary-fixed: 55 14 0;
-    --on-tertiary-fixed-variant: 255 181 152;
-    --background: 11 16 15;
-    --on-background: 226 232 230;
-    --surface-variant: 49 57 55;
-    --nav-active-bg: 35 43 41;
-  }
+    --on-tertiary-fixed-variant: 115 53 25;
+    --background: 246 250 249;
+    --on-background: 24 28 28;
+    --surface-variant: 223 227 226;
+    --nav-active-bg: 255 255 255;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        color-scheme: dark;
+        --surface: 14 20 19;
+        --surface-dim: 11 16 15;
+        --surface-bright: 52 59 57;
+        --surface-canvas: 11 16 15;
+        --surface-sidebar: 21 27 26;
+        --surface-container-lowest: 22 29 27;
+        --surface-container-low: 30 37 35;
+        --surface-container: 35 43 41;
+        --surface-container-high: 42 50 47;
+        --surface-container-highest: 49 57 55;
+        --on-surface: 226 232 230;
+        --on-surface-variant: 170 179 177;
+        --inverse-surface: 226 232 230;
+        --inverse-on-surface: 27 34 33;
+        --outline: 137 147 144;
+        --outline-variant: 58 67 65;
+        --border-subtle: 51 59 57;
+        --text-main: 230 236 233;
+        --text-muted: 170 179 177;
+        --surface-tint: 123 214 207;
+        --primary: 95 212 204;
+        --on-primary: 0 32 30;
+        --primary-container: 0 80 76;
+        --on-primary-container: 151 242 236;
+        --inverse-primary: 5 122 117;
+        --secondary: 255 90 82;
+        --on-secondary: 255 255 255;
+        --secondary-container: 192 0 9;
+        --on-secondary-container: 255 251 255;
+        --tertiary: 255 181 152;
+        --on-tertiary: 82 33 0;
+        --tertiary-container: 102 53 21;
+        --on-tertiary-container: 255 219 206;
+        --error: 255 180 171;
+        --on-error: 105 0 5;
+        --error-container: 147 0 10;
+        --on-error-container: 255 218 214;
+        --primary-fixed: 151 242 236;
+        --primary-fixed-dim: 123 214 207;
+        --on-primary-fixed: 0 32 30;
+        --on-primary-fixed-variant: 0 80 76;
+        --secondary-fixed: 255 218 213;
+        --secondary-fixed-dim: 255 180 170;
+        --on-secondary-fixed: 65 0 1;
+        --on-secondary-fixed-variant: 147 0 7;
+        --tertiary-fixed: 255 219 206;
+        --tertiary-fixed-dim: 255 181 152;
+        --on-tertiary-fixed: 55 14 0;
+        --on-tertiary-fixed-variant: 255 181 152;
+        --background: 11 16 15;
+        --on-background: 226 232 230;
+        --surface-variant: 49 57 55;
+        --nav-active-bg: 35 43 41;
+    }
 }
 
 /* Avoid a white flash before the shell paints */
-html, body { background: rgb(var(--surface-canvas)); }
+html, body {
+    background: rgb(var(--surface-canvas));
+}
