@@ -49,8 +49,8 @@
           </button>
         </div>
         @if (files().length === 0) {
-          <div (click)="addFiles()" class="flex-1 border-2 border-dashed border-outline-variant rounded-xl flex flex-col items-center justify-center p-10 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors min-h-[220px]">
-            <span class="material-symbols-outlined text-primary" style="font-size:40px;">note_add</span>
+          <div (click)="addFiles()" class="flex-1 border-2 border-dashed border-outline-variant rounded-xl flex flex-col items-center justify-center p-10 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors min-h-[165px]">
+            <span class="material-symbols-outlined text-primary icon-3xl">note_add</span>
             <p class="text-headline-md mt-3">Add PDFs to compress</p>
             <p class="text-on-surface-variant text-body-md">or click to browse</p>
           </div>
@@ -69,8 +69,8 @@
                   <tr class="hover:bg-surface-container transition-colors">
                     <td class="px-4 py-3">
                       <div class="flex items-center gap-3">
-                        <div class="w-8 h-10 bg-error/10 text-error flex items-center justify-center rounded border border-error/20"><span class="material-symbols-outlined" style="font-size:20px;">picture_as_pdf</span></div>
-                        <span class="text-body-md font-medium truncate max-w-[220px]">{{ f.name }}</span>
+                        <div class="w-8 h-10 bg-error/10 text-error flex items-center justify-center rounded border border-error/20"><span class="material-symbols-outlined icon-sm">picture_as_pdf</span></div>
+                        <span class="text-body-md font-medium truncate max-w-[165px]">{{ f.name }}</span>
                       </div>
                     </td>
                     <td class="px-4 py-3 font-mono-sm" [class.text-error]="f.error">{{ f.error || fmtBytes(f.size) }}</td>

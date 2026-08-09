@@ -1,5 +1,5 @@
 <!-- Global layout shell -->
-<div class="flex h-[133.334vh] w-[133.334vw] p-4 gap-4 bg-surface-canvas text-on-surface font-body-md overflow-hidden">
+<div class="flex h-full w-full p-4 gap-4 bg-surface-canvas text-on-surface font-body-md overflow-hidden">
   <!-- Sidebar -->
   <aside class="flex flex-col h-full w-sidebar-width shrink-0 bg-surface-sidebar rounded-3xl overflow-hidden">
     <!-- Brand header -->
@@ -11,8 +11,8 @@
           class="w-12 h-12 object-contain shrink-0"
         />
         <div class="flex flex-col justify-center">
-          <h1 class="text-[22px] font-bold text-text-main leading-tight whitespace-nowrap">PDF Toolbox</h1>
-          <p class="text-[12px] font-bold text-text-muted uppercase tracking-widest">Professional Utility</p>
+          <h1 class="text-[17px] font-bold text-text-main leading-tight whitespace-nowrap">PDF Toolbox</h1>
+          <p class="text-[9px] font-bold text-text-muted uppercase tracking-wider whitespace-nowrap">Professional Utility</p>
         </div>
       </div>
     </div>
@@ -25,7 +25,7 @@
           routerLinkActive="nav-active"
           class="nav-item flex items-center gap-4 px-4 py-3 rounded-full text-text-muted hover:text-primary transition-colors cursor-pointer text-body-md"
         >
-          <span class="material-symbols-outlined nav-icon" style="font-size:20px;">{{ item.icon }}</span>
+          <span class="material-symbols-outlined nav-icon icon-sm">{{ item.icon }}</span>
           <span>{{ item.label }}</span>
         </a>
       }
@@ -37,7 +37,7 @@
         routerLink="/images"
         class="w-full bg-secondary text-white rounded-xl font-bold py-2.5 px-4 flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-secondary/20"
       >
-        <span class="material-symbols-outlined" style="font-size:20px;">add</span>
+        <span class="material-symbols-outlined icon-sm">add</span>
         <span>New Document</span>
       </a>
     </div>

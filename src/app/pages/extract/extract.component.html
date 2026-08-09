@@ -7,14 +7,14 @@
 
     @if (!file()) {
       <div (click)="choose()" class="border-2 border-dashed border-outline-variant rounded-xl p-12 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
-        <span class="material-symbols-outlined text-primary" style="font-size:40px;">upload_file</span>
+        <span class="material-symbols-outlined text-primary icon-3xl">upload_file</span>
         <p class="text-headline-md mt-3">Choose a PDF</p>
         <p class="text-on-surface-variant text-body-md">or click to browse your files</p>
       </div>
     } @else {
       <div class="bg-surface border border-outline-variant rounded-xl overflow-hidden">
         <div class="px-6 py-4 border-b border-outline-variant flex items-center gap-3">
-          <div class="w-9 h-11 bg-error/10 border border-error/20 rounded flex items-center justify-center text-error"><span class="material-symbols-outlined" style="font-size:20px;">picture_as_pdf</span></div>
+          <div class="w-9 h-11 bg-error/10 border border-error/20 rounded flex items-center justify-center text-error"><span class="material-symbols-outlined icon-sm">picture_as_pdf</span></div>
           <div class="flex-1 min-w-0">
             <p class="font-medium truncate">{{ file()!.name }}</p>
             <p class="text-label-md text-on-surface-variant font-mono-sm">{{ file()!.pages ?? '—' }} pages · {{ fmtBytes(file()!.size) }}</p>
@@ -62,7 +62,7 @@
               </select>
             </div>
             <p class="sm:col-span-2 text-label-md text-on-surface-variant flex items-center gap-2">
-              <span class="material-symbols-outlined text-outline" style="font-size:18px;">info</span>
+              <span class="material-symbols-outlined text-outline icon-sm">info</span>
               Page rendering needs the pdfium library (bundled via <span class="font-mono-sm">--features render</span>). See README.
             </p>
           </div>
@@ -71,7 +71,7 @@
         <div class="px-6 py-4 bg-surface-container-low border-t border-outline-variant flex justify-end">
           <button (click)="run()" [disabled]="!canRun()"
                   class="bg-primary text-on-primary px-8 py-3 rounded-lg font-label-md flex items-center gap-2 shadow-sm hover:brightness-110 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-            <span class="material-symbols-outlined" style="font-size:19px;">{{ mode()==='text' ? 'article' : 'image' }}</span>
+            <span class="material-symbols-outlined icon-sm">{{ mode()==='text' ? 'article' : 'image' }}</span>
             {{ mode()==='text' ? 'Extract Text' : 'Export Images' }}
           </button>
         </div>

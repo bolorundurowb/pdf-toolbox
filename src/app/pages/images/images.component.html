@@ -11,7 +11,7 @@
       <div (click)="addFiles()"
            class="border-2 border-dashed border-outline-variant bg-surface-container-lowest rounded-xl flex flex-col items-center justify-center p-12 transition-all hover:bg-surface-container-low cursor-pointer group">
         <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-          <span class="material-symbols-outlined text-primary" style="font-size:36px;">cloud_upload</span>
+          <span class="material-symbols-outlined text-primary icon-2xl">cloud_upload</span>
         </div>
         <h3 class="text-headline-md mb-2">Drag and drop images here</h3>
         <p class="text-on-surface-variant mb-6">or click to browse your files (JPG, PNG, TIFF)</p>
@@ -34,10 +34,10 @@
                   @if (!f.error) {
                     <img class="w-full h-full object-cover" [src]="thumb(f.path)" [alt]="f.name" />
                   } @else {
-                    <span class="material-symbols-outlined text-error" style="font-size:32px;">broken_image</span>
+                    <span class="material-symbols-outlined text-error icon-xl">broken_image</span>
                   }
                   <button (click)="remove(i)" class="absolute top-2 right-2 w-8 h-8 bg-surface/80 backdrop-blur rounded flex items-center justify-center text-error hover:bg-error hover:text-white transition-colors shadow-sm">
-                    <span class="material-symbols-outlined" style="font-size:20px;">delete</span>
+                    <span class="material-symbols-outlined icon-sm">delete</span>
                   </button>
                   @if (metaOf(f)) {
                     <div class="absolute bottom-2 left-2 px-2 py-1 bg-surface/80 backdrop-blur rounded text-[10px] font-mono-sm">{{ metaOf(f) }}</div>
@@ -52,7 +52,7 @@
                 </div>
               </div>
             }
-            <button (click)="addFiles()" class="border-2 border-dashed border-outline-variant rounded-lg flex flex-col items-center justify-center gap-2 hover:border-primary hover:bg-surface-container-low transition-all group min-h-[180px]">
+            <button (click)="addFiles()" class="border-2 border-dashed border-outline-variant rounded-lg flex flex-col items-center justify-center gap-2 hover:border-primary hover:bg-surface-container-low transition-all group min-h-[135px]">
               <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">add_photo_alternate</span>
               <span class="text-label-md text-on-surface-variant group-hover:text-primary">Add More</span>
             </button>
@@ -115,7 +115,7 @@
       <div class="p-6 bg-surface-container border-t border-outline-variant">
         <button (click)="convert()" [disabled]="!canRun()"
                 class="w-full bg-primary text-on-primary py-4 rounded-xl text-headline-md shadow-lg shadow-primary/20 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none">
-          <span class="material-symbols-outlined fill" style="font-size:22px;">picture_as_pdf</span> Convert to PDF
+          <span class="material-symbols-outlined fill icon-md">picture_as_pdf</span> Convert to PDF
         </button>
         <p class="text-center text-label-md text-on-surface-variant mt-4">{{ summaryText() }}</p>
       </div>

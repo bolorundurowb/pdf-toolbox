@@ -70,7 +70,7 @@
       </div>
       @if (files().length === 0) {
         <div (click)="addFiles()" class="border-2 border-dashed border-outline-variant rounded-xl p-10 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
-          <span class="material-symbols-outlined text-outline" style="font-size:36px;">{{ mode()==='add' ? 'lock' : 'lock_open' }}</span>
+          <span class="material-symbols-outlined text-outline icon-2xl">{{ mode()==='add' ? 'lock' : 'lock_open' }}</span>
           <p class="text-headline-md mt-2">{{ mode()==='add' ? 'Add PDFs to protect' : 'Add locked PDFs to unlock' }}</p>
           <p class="text-on-surface-variant text-body-md">or click to browse</p>
         </div>
@@ -78,7 +78,7 @@
         <div class="border border-outline-variant rounded-lg divide-y divide-outline-variant">
           @for (f of files(); track f.path; let i = $index) {
             <div class="px-4 py-3 flex items-center gap-3 hover:bg-surface-container transition-colors">
-              <div class="w-8 h-10 bg-error/10 text-error flex items-center justify-center rounded border border-error/20"><span class="material-symbols-outlined" style="font-size:20px;">picture_as_pdf</span></div>
+              <div class="w-8 h-10 bg-error/10 text-error flex items-center justify-center rounded border border-error/20"><span class="material-symbols-outlined icon-sm">picture_as_pdf</span></div>
               <span class="flex-1 text-body-md font-medium truncate">{{ f.name }}</span>
               <span class="font-mono-sm text-on-surface-variant text-label-md">{{ fmtBytes(f.size) }}</span>
               <button (click)="remove(i)" class="text-outline hover:text-error transition-colors p-1"><span class="material-symbols-outlined">delete</span></button>

@@ -10,12 +10,12 @@
         <button (click)="setTab('merge')" class="px-6 py-2 rounded-md transition-all flex items-center gap-2 text-label-md"
                 [class.bg-surface-container-lowest]="tab()==='merge'" [class.text-primary]="tab()==='merge'" [class.font-bold]="tab()==='merge'" [class.shadow-sm]="tab()==='merge'"
                 [class.text-on-surface-variant]="tab()!=='merge'">
-          <span class="material-symbols-outlined" style="font-size:18px;">call_merge</span> Merge
+          <span class="material-symbols-outlined icon-sm">call_merge</span> Merge
         </button>
         <button (click)="setTab('split')" class="px-6 py-2 rounded-md transition-all flex items-center gap-2 text-label-md"
                 [class.bg-surface-container-lowest]="tab()==='split'" [class.text-primary]="tab()==='split'" [class.font-bold]="tab()==='split'" [class.shadow-sm]="tab()==='split'"
                 [class.text-on-surface-variant]="tab()!=='split'">
-          <span class="material-symbols-outlined" style="font-size:18px;">call_split</span> Split
+          <span class="material-symbols-outlined icon-sm">call_split</span> Split
         </button>
       </div>
     </div>
@@ -27,7 +27,7 @@
           <div (click)="addMergeFiles()"
                class="h-44 rounded-xl flex flex-col items-center justify-center border-2 border-dashed border-outline-variant hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer group">
             <div class="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center text-primary mb-3 group-hover:scale-110 transition-transform">
-              <span class="material-symbols-outlined" style="font-size:36px;">cloud_upload</span>
+              <span class="material-symbols-outlined icon-2xl">cloud_upload</span>
             </div>
             <p class="text-headline-md text-on-surface">Drag and drop PDFs here</p>
             <p class="text-on-surface-variant text-body-md mt-1">or <span class="text-primary font-bold">browse files</span></p>
@@ -45,11 +45,11 @@
                        class="px-6 py-4 flex items-center gap-4 hover:bg-surface-container-low transition-colors group">
                     <span class="material-symbols-outlined text-outline cursor-grab active:cursor-grabbing">drag_indicator</span>
                     <div class="w-10 h-12 bg-error/10 border border-error/20 rounded flex items-center justify-center text-error">
-                      <span class="material-symbols-outlined" style="font-size:24px;">description</span>
+                      <span class="material-symbols-outlined icon-md">description</span>
                     </div>
                     <div class="flex-1 min-w-0">
                       <p class="font-medium text-on-surface truncate">{{ f.name }}</p>
-                      <p class="text-xs font-mono-sm" [class.text-on-surface-variant]="!f.error" [class.text-error]="f.error">{{ f.error || fileMeta(f) }}</p>
+                      <p class="text-label-md font-mono-sm" [class.text-on-surface-variant]="!f.error" [class.text-error]="f.error">{{ f.error || fileMeta(f) }}</p>
                     </div>
                     <button (click)="removeMerge(i)" class="p-2 text-on-surface-variant hover:text-error hover:bg-error/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
                       <span class="material-symbols-outlined">delete</span>
@@ -70,7 +70,7 @@
             <div (click)="chooseSplitFile()"
                  class="h-44 rounded-xl flex flex-col items-center justify-center border-2 border-dashed border-outline-variant hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer group">
               <div class="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center text-primary mb-3 group-hover:scale-110 transition-transform">
-                <span class="material-symbols-outlined" style="font-size:36px;">upload_file</span>
+                <span class="material-symbols-outlined icon-2xl">upload_file</span>
               </div>
               <p class="text-headline-md text-on-surface">Choose a PDF to split</p>
               <p class="text-on-surface-variant text-body-md mt-1">or <span class="text-primary font-bold">browse files</span></p>
@@ -80,11 +80,11 @@
               <div class="px-6 py-5 border-b border-outline-variant flex items-center justify-between gap-4">
                 <div class="flex items-center gap-4 min-w-0">
                   <div class="w-12 h-14 bg-error/10 border border-error/20 rounded flex items-center justify-center text-error shrink-0">
-                    <span class="material-symbols-outlined" style="font-size:28px;">description</span>
+                    <span class="material-symbols-outlined icon-lg">description</span>
                   </div>
                   <div class="min-w-0">
                     <h3 class="font-bold text-on-surface truncate">{{ splitFile()!.name }}</h3>
-                    <p class="text-xs text-on-surface-variant font-mono-sm">{{ fileMeta(splitFile()!) }}</p>
+                    <p class="text-label-md text-on-surface-variant font-mono-sm">{{ fileMeta(splitFile()!) }}</p>
                   </div>
                 </div>
                 <button (click)="chooseSplitFile()" class="px-4 py-2 border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-container transition-all flex items-center gap-2 shrink-0">
@@ -142,7 +142,7 @@
                     </div>
                     @if (p.on && splitMode()==='ranges') {
                       <div class="absolute inset-0 bg-primary/10 flex items-center justify-center rounded">
-                        <span class="material-symbols-outlined text-primary fill" style="font-size:20px;">check_circle</span>
+                        <span class="material-symbols-outlined text-primary fill icon-sm">check_circle</span>
                       </div>
                     }
                     <span class="block text-center mt-1 text-[10px] font-medium" [class.text-primary]="p.on && splitMode()==='ranges'" [class.text-on-surface-variant]="!(p.on && splitMode()==='ranges')">{{ p.n }}</span>
@@ -190,12 +190,12 @@
 
         @if (tab()==='merge') {
           <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-sm">
-            <h3 class="font-bold text-on-surface mb-4 flex items-center gap-2"><span class="material-symbols-outlined" style="font-size:18px;">tune</span> Advanced Options</h3>
+            <h3 class="font-bold text-on-surface mb-4 flex items-center gap-2"><span class="material-symbols-outlined icon-sm">tune</span> Advanced Options</h3>
             <label class="flex items-center gap-3 cursor-pointer">
               <input type="checkbox" [checked]="optimize()" (change)="optimize.set($any($event.target).checked)" class="rounded accent-primary h-5 w-5 border-outline-variant" />
               <div class="flex-1">
                 <p class="font-medium text-on-surface text-body-md">Optimise output size</p>
-                <p class="text-xs text-on-surface-variant">Recompress the merged file (pure Rust)</p>
+                <p class="text-label-md text-on-surface-variant">Recompress the merged file (pure Rust)</p>
               </div>
             </label>
           </div>
@@ -205,7 +205,7 @@
           <span class="material-symbols-outlined text-secondary">lightbulb</span>
           <div>
             <p class="font-bold text-on-secondary-container text-body-md">Pro Tip</p>
-            <p class="text-on-secondary-container/80 text-sm mt-1">Drag file items in the list to change the merge order.</p>
+            <p class="text-on-secondary-container/80 text-body-sm mt-1">Drag file items in the list to change the merge order.</p>
           </div>
         </div>
       </div>

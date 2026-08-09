@@ -35,11 +35,26 @@
         margin: 0;
     }
 
+    /* Layout metrics (spacing, sizing, radii) are rem-based, so the root size
+       sets the UI density. Type is declared in px and stays independent. */
+    html {
+        font-size: 12px;
+    }
+
     body {
         font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+        font-size: 13px;
+        line-height: 18px;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
         overflow: hidden;
+    }
+
+    /* Angular hosts are inline by default, which would collapse the shell's
+       percentage height/width. */
+    app-root {
+        display: block;
+        height: 100%;
     }
 }
 
@@ -66,16 +81,49 @@
     font-variation-settings: 'opsz' 24, 'wght' 400, 'GRAD' 0, 'FILL' 1;
 }
 
+/* Icon size steps — rem-based so glyphs track the root UI density */
+.icon-xs {
+    font-size: 1rem;
+}
+
+.icon-sm {
+    font-size: 1.25rem;
+}
+
+.icon-md {
+    font-size: 1.5rem;
+}
+
+.icon-lg {
+    font-size: 1.75rem;
+}
+
+.icon-xl {
+    font-size: 2rem;
+}
+
+.icon-2xl {
+    font-size: 2.25rem;
+}
+
+.icon-3xl {
+    font-size: 2.5rem;
+}
+
+.icon-4xl {
+    font-size: 3rem;
+}
+
 /* Scrollbars */
 .custom-scrollbar::-webkit-scrollbar, ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
 }
 
 ::-webkit-scrollbar-thumb {
     background: var(--tw-scrollbar, #c3c6d7);
     border-radius: 999px;
-    border: 3px solid transparent;
+    border: 2px solid transparent;
     background-clip: content-box;
 }
 
@@ -129,13 +177,6 @@
 
 .nav-active .material-symbols-outlined {
     font-variation-settings: 'opsz' 24, 'wght' 500, 'GRAD' 0, 'FILL' 1;
-}
-
-/* Global UI scale — render the whole app 25% smaller.
-   Zoom lives on <body>; the layout shell uses 133.334vh/vw so that after the
-   0.75 zoom it fills the window exactly (no blank strip, nothing cut off). */
-body {
-    zoom: 0.75;
 }
 
 /* Routed page hosts must fill the main panel so pages using h-full

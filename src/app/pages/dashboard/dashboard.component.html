@@ -35,7 +35,7 @@
         <div class="px-8 py-10 text-center text-text-muted text-body-md">Loading…</div>
       } @else if (recent().length === 0) {
         <div class="px-8 py-12 text-center">
-          <span class="material-symbols-outlined text-outline-variant" style="font-size:48px;">folder_open</span>
+          <span class="material-symbols-outlined text-outline-variant icon-4xl">folder_open</span>
           <p class="text-text-muted text-body-md mt-2">No files yet. Your processed PDFs will appear here.</p>
         </div>
       } @else {
@@ -54,9 +54,9 @@
                 <td class="px-8 py-5">
                   <div class="flex items-center gap-3">
                     <div class="w-9 h-9 bg-primary/5 text-primary rounded-xl flex items-center justify-center shrink-0">
-                      <span class="material-symbols-outlined" style="font-size:18px;">description</span>
+                      <span class="material-symbols-outlined icon-sm">description</span>
                     </div>
-                    <span class="text-body-md text-text-main font-medium truncate max-w-[280px]">{{ f.name }}</span>
+                    <span class="text-body-md text-text-main font-medium truncate max-w-sidebar-width">{{ f.name }}</span>
                   </div>
                 </td>
                 <td class="px-8 py-5 hidden md:table-cell text-text-muted text-body-md">{{ fmtDate(f.modified) }}</td>
@@ -64,10 +64,10 @@
                 <td class="px-8 py-5 text-right">
                   <div class="flex justify-end gap-2">
                     <button (click)="open(f)" title="Open" class="p-2 text-primary hover:bg-primary/10 rounded-xl transition-all active:scale-90">
-                      <span class="material-symbols-outlined" style="font-size:20px;">visibility</span>
+                      <span class="material-symbols-outlined icon-sm">visibility</span>
                     </button>
                     <button (click)="reveal(f)" title="Show in folder" class="p-2 text-text-muted hover:bg-surface-container rounded-xl transition-all active:scale-90">
-                      <span class="material-symbols-outlined" style="font-size:20px;">folder_open</span>
+                      <span class="material-symbols-outlined icon-sm">folder_open</span>
                     </button>
                   </div>
                 </td>

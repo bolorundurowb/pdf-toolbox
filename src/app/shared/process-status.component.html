@@ -4,7 +4,7 @@
       <div class="w-20 h-20 mx-auto mb-6 relative">
         <div class="absolute inset-0 rounded-full border-4 border-surface-container-high"></div>
         <div class="absolute inset-0 rounded-full border-4 border-transparent border-t-primary" style="animation: pdfspin .8s linear infinite;"></div>
-        <span class="material-symbols-outlined absolute inset-0 m-auto text-primary" style="font-size:28px;width:28px;height:28px;">{{ icon() }}</span>
+        <span class="material-symbols-outlined absolute inset-0 m-auto text-primary icon-lg" style="width:1.75rem;height:1.75rem;">{{ icon() }}</span>
       </div>
       <h3 class="text-headline-md mb-1">Working…</h3>
       <p class="text-on-surface-variant text-body-md mb-5">{{ message() }}</p>
@@ -16,7 +16,7 @@
   } @else if (stage() === 'done' && result()) {
     <div class="w-full max-w-lg text-center animate-fade-in">
       <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-secondary-container flex items-center justify-center">
-        <span class="material-symbols-outlined text-primary fill" style="font-size:36px;">check_circle</span>
+        <span class="material-symbols-outlined text-primary fill icon-2xl">check_circle</span>
       </div>
       <h3 class="text-headline-lg mb-1">{{ doneTitle() }}</h3>
       <p class="text-on-surface-variant text-body-md mb-6">Saved to your PDF Toolbox folder.</p>
@@ -25,7 +25,7 @@
         @for (f of result()!.files; track f.path) {
           <div class="flex items-center gap-3 px-4 py-3 border-b border-outline-variant last:border-b-0">
             <div class="w-9 h-9 rounded-lg bg-error/10 border border-error/20 text-error flex items-center justify-center shrink-0">
-              <span class="material-symbols-outlined" style="font-size:20px;">picture_as_pdf</span>
+              <span class="material-symbols-outlined icon-sm">picture_as_pdf</span>
             </div>
             <div class="flex-1 min-w-0">
               <p class="text-body-md font-medium truncate">{{ f.name }}</p>
@@ -35,7 +35,7 @@
               <span class="text-label-md font-bold text-primary bg-primary-fixed px-2 py-0.5 rounded-full">{{ f.badge }}</span>
             }
             <button (click)="openFile.emit(f.path)" title="Open" class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-surface-container rounded-lg">
-              <span class="material-symbols-outlined" style="font-size:20px;">visibility</span>
+              <span class="material-symbols-outlined icon-sm">visibility</span>
             </button>
           </div>
         }
@@ -43,7 +43,7 @@
 
       <div class="flex gap-3 justify-center">
         <button (click)="openFolder.emit()" class="bg-primary text-on-primary px-6 py-2.5 rounded-lg font-label-md flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all">
-          <span class="material-symbols-outlined" style="font-size:19px;">folder_open</span> Open folder
+          <span class="material-symbols-outlined icon-sm">folder_open</span> Open folder
         </button>
         <button (click)="reset.emit()" class="px-6 py-2.5 rounded-lg border border-outline-variant hover:bg-surface-container transition-colors font-label-md">Start over</button>
       </div>
@@ -51,7 +51,7 @@
   } @else {
     <div class="w-full max-w-md text-center animate-fade-in">
       <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-error-container flex items-center justify-center">
-        <span class="material-symbols-outlined text-error" style="font-size:32px;">error</span>
+        <span class="material-symbols-outlined text-error icon-xl">error</span>
       </div>
       <h3 class="text-headline-md mb-1">Couldn't complete that</h3>
       <p class="text-on-surface-variant text-body-md mb-6">{{ error() }}</p>
