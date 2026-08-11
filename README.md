@@ -13,10 +13,10 @@ computer — no uploads, no cloud, no account.
 |-------------------|-------------------------------------------------------------------------------------------|
 | **Dashboard**     | Quick actions and recent files from your output folder                                    |
 | **Image to PDF**  | Combine JPG, PNG, TIFF, or HEIC into one PDF (page size, orientation, margin, quality)    |
-| **Merge / Split** | Merge PDFs (drag to reorder) or split by page ranges or max file size                     |
-| **Organize**      | Reorder, rotate, or delete pages and save a new PDF                                       |
+| **Merge**         | Combine several PDFs into one (drag to reorder)                                            |
+| **Organise**      | Reorder, rotate, duplicate, or delete pages and save a new PDF                             |
 | **Compress**      | Shrink PDFs (Low / Recommended / Extreme), optional grayscale and strip metadata          |
-| **Extract**       | Pull text to a `.txt` file, or export pages as PNG/JPG (when page rendering is available) |
+| **Extract**       | Pick pages, then save them as text, PNG/JPG images, or a new PDF — or split by file size   |
 | **Security**      | Add a password (AES-256, AES-128, or RC4) or remove one you already know                  |
 | **Metadata**      | View and edit Title, Author, Subject, Keywords, and Creator                               |
 
@@ -48,6 +48,8 @@ Outputs are saved under your Documents folder in **PDF Toolbox** by default
 ### Tips
 
 - **Merge** — drag items in the list to change order before merging.
+- **Organise / Extract** — tiles show a real preview of each page. Drag to
+  reorder, or focus a tile and press Ctrl/Cmd with the arrow keys.
 - **Merge → Optimize output** — recompresses the result to reduce size.
 - **Organize** — pages are shown as numbered tiles; reorder, rotate, or remove, then save.
 - **Security** — keep a copy of the password; locked PDFs cannot be recovered without it.
