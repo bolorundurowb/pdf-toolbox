@@ -36,8 +36,9 @@ export class SecurityComponent {
 
   readonly okFiles = computed(() => this.files().filter((f) => !f.error));
   readonly canRun = computed(() => {
+    if (this.mode() === 'remove') return this.files().length > 0 && this.unlockPassword().length > 0;
     if (this.okFiles().length === 0) return false;
-    return this.mode() === 'add' ? this.userPassword().length > 0 : this.unlockPassword().length > 0;
+    return this.userPassword().length > 0;
   });
 
   constructor(public readonly pdf: PdfService) {}
