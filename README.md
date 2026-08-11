@@ -49,8 +49,7 @@ Outputs are saved under your Documents folder in **PDF Toolbox** by default
 ### Tips
 
 - **Merge** — drag items in the list to change order before merging.
-- **Organise / Extract** — tiles show a real preview of each page. Drag to
-  reorder, or focus a tile and press Ctrl/Cmd with the arrow keys.
+- **Organise / Extract** — tiles show a real preview of each page. Drag to reorder, or focus a tile and press Ctrl/Cmd with the arrow keys.
 - **Merge → Optimize output** — recompresses the result to reduce size.
 - **Organize** — pages are shown as numbered tiles; reorder, rotate, or remove, then save.
 - **Security** — keep a copy of the password; locked PDFs cannot be recovered without it.
