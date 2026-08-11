@@ -8,11 +8,6 @@ on:
         required: false
         type: boolean
         default: true
-      enable_render:
-        description: 'Enable the pdfium render feature (Extract → pages as images)'
-        required: false
-        type: boolean
-        default: false
 
 permissions:
   contents: write
@@ -135,9 +130,6 @@ jobs:
 
             **Version:** ${{ needs.prepare.outputs.version }}
             **Platforms:** Windows (x64), Linux (x64), macOS (Intel + Apple Silicon)
-
-            Page-to-image export requires building with the `render` feature and a
-            pdfium library (not included by default). All other tools are pure Rust.
           releaseDraft: ${{ inputs.draft }}
           prerelease: ${{ needs.prepare.outputs.prerelease == 'true' }}
-          args: ${{ format('{0}{1}', matrix.args, inputs.enable_render && ' --features render' || '') }}
+          args: ${{ matrix.args }}
