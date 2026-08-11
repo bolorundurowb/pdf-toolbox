@@ -3,6 +3,7 @@
 </p>
 
 # PDF Toolbox
+[![Build](https://github.com/bolorundurowb/pdf-toolbox/actions/workflows/build.yml/badge.svg)](https://github.com/bolorundurowb/pdf-toolbox/actions/workflows/build.yml)
 
 A local, offline desktop app for everyday PDF work. Everything runs on your
 computer — no uploads, no cloud, no account.
