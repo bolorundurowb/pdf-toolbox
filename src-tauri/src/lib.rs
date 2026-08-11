@@ -3,7 +3,6 @@
 mod pdf;
 
 use tauri::ipc::Channel;
-use tauri::path::BaseDirectory;
 use tauri::Manager;
 
 use pdf::model::{
@@ -118,17 +117,6 @@ async fn recent_outputs(app: tauri::AppHandle) -> Result<Vec<RecentFile>, String
 }
 
 #[tauri::command]
-async fn extract_text(
-    path: String,
-    out_dir: String,
-    on_progress: Channel<Progress>,
-) -> Result<OperationResult, String> {
-    tauri::async_runtime::spawn_blocking(move || pdf::extract::extract_text(path, out_dir, &on_progress))
-        .await
-        .map_err(|e| format!("Task failed: {e}"))?
-}
-
-#[tauri::command]
 async fn organize_pdf(
     path: String,
     pages: Vec<PageOp>,
@@ -138,27 +126,6 @@ async fn organize_pdf(
     tauri::async_runtime::spawn_blocking(move || pdf::organize::organize_pdf(path, pages, out_dir, &on_progress))
         .await
         .map_err(|e| format!("Task failed: {e}"))?
-}
-
-#[tauri::command]
-async fn pages_to_images(
-    app: tauri::AppHandle,
-    path: String,
-    out_dir: String,
-    image_format: String,
-    dpi: u32,
-    on_progress: Channel<Progress>,
-) -> Result<OperationResult, String> {
-    let lib_dir = app
-        .path()
-        .resolve("pdfium", BaseDirectory::Resource)
-        .ok()
-        .map(|p| p.to_string_lossy().to_string());
-    tauri::async_runtime::spawn_blocking(move || {
-        pdf::render::pages_to_images(path, out_dir, image_format, dpi, lib_dir, &on_progress)
-    })
-    .await
-    .map_err(|e| format!("Task failed: {e}"))?
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -178,9 +145,7 @@ pub fn run() {
             get_metadata,
             set_metadata,
             recent_outputs,
-            extract_text,
             organize_pdf,
-            pages_to_images,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

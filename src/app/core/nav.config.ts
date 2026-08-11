@@ -7,7 +7,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
   { label: 'Image to PDF', icon: 'image', route: '/images' },
-  { label: 'Merge/Split', icon: 'call_merge', route: '/merge-split' },
+  { label: 'Merge', icon: 'call_merge', route: '/merge' },
   { label: 'Organise', icon: 'reorder', route: '/organize' },
   { label: 'Compress', icon: 'compress', route: '/compress' },
   { label: 'Extract', icon: 'article', route: '/extract' },

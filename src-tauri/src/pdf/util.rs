@@ -38,7 +38,31 @@ pub fn stem(path: &Path) -> String {
         .to_string()
 }
 
+/// Strips anything that would let a user-supplied output name escape the output
+/// folder or upset the filesystem. Output names come straight from a text box, and
+/// `Path::join` happily resolves `../` — or replaces the whole path if handed
+/// something absolute like `C:\Windows\...`.
+pub fn sanitize_file_name(name: &str) -> String {
+    let cleaned: String = name
+        .chars()
+        .map(|c| match c {
+            '/' | '\\' => '-',
+            '<' | '>' | ':' | '"' | '|' | '?' | '*' => '_',
+            c if c.is_control() => '_',
+            c => c,
+        })
+        .collect();
+
+    // A name of only dots (`.`, `..`) would still resolve to a directory.
+    let trimmed = cleaned.trim();
+    if trimmed.is_empty() || trimmed.chars().all(|c| c == '.') {
+        return "output".to_string();
+    }
+    trimmed.to_string()
+}
+
 pub fn unique_path(dir: &Path, file_name: &str) -> PathBuf {
+    let file_name = &sanitize_file_name(file_name);
     let candidate = dir.join(file_name);
     if !candidate.exists() {
         return candidate;

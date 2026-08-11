@@ -11,9 +11,11 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/images/images.component').then((m) => m.ImagesComponent),
   },
   {
-    path: 'merge-split',
-    loadComponent: () => import('./pages/merge-split/merge-split.component').then((m) => m.MergeSplitComponent),
+    path: 'merge',
+    loadComponent: () => import('./pages/merge/merge.component').then((m) => m.MergeComponent),
   },
+  // Splitting moved to Extract; keep old deep links working.
+  { path: 'merge-split', redirectTo: 'merge' },
   {
     path: 'compress',
     loadComponent: () => import('./pages/compress/compress.component').then((m) => m.CompressComponent),

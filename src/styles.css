@@ -179,6 +179,56 @@
     font-variation-settings: 'opsz' 24, 'wght' 500, 'GRAD' 0, 'FILL' 1;
 }
 
+/* Drag-to-reorder: a caret marking where the dragged item will land. */
+.reorder-drop-before, .reorder-drop-after {
+    position: relative;
+}
+
+.reorder-drop-before::before, .reorder-drop-after::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    width: 3px;
+    border-radius: 999px;
+    background: rgb(var(--primary));
+    box-shadow: 0 0 0 2px rgb(var(--primary) / 0.2);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.reorder-drop-before::before {
+    left: -6px;
+}
+
+.reorder-drop-after::after {
+    right: -6px;
+}
+
+/* A vertical list reorders by row, so the caret has to be horizontal. */
+.reorder-list.reorder-drop-before::before, .reorder-list.reorder-drop-after::after {
+    top: auto;
+    bottom: auto;
+    left: 0;
+    right: 0;
+    width: auto;
+    height: 3px;
+}
+
+.reorder-list.reorder-drop-before::before {
+    top: -2px;
+}
+
+.reorder-list.reorder-drop-after::after {
+    bottom: -2px;
+}
+
+[appReorderItem]:focus-visible {
+    outline: 2px solid rgb(var(--primary));
+    outline-offset: 2px;
+    border-radius: 0.5rem;
+}
+
 /* Routed page hosts must fill the main panel so pages using h-full
    (e.g. Image to PDF's settings sidebar) stretch the full height. */
 main > :not(router-outlet) {

@@ -33,6 +33,13 @@ export function createRunner() {
     }
   }
 
+  /** Shows the error panel without running anything — e.g. an unreadable file. */
+  function fail(reason: string) {
+    error.set(reason);
+    result.set(null);
+    stage.set('error');
+  }
+
   function reset() {
     stage.set('idle');
     progress.set(0);
@@ -41,7 +48,7 @@ export function createRunner() {
     error.set(null);
   }
 
-  return { stage, progress, message, result, error, run, reset };
+  return { stage, progress, message, result, error, run, fail, reset };
 }
 
 function describe(e: unknown): string {

@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use lopdf::encryption::crypt_filters::{Aes128CryptFilter, Aes256CryptFilter, CryptFilter, Rc4CryptFilter};
 use lopdf::{Document, EncryptionState, EncryptionVersion, Error, LoadOptions, Permissions};
-use rand::Rng;
+use rand::RngExt;
 use tauri::ipc::Channel;
 
 use super::model::{OperationResult, OutputFile, Progress, SecurityOptions};

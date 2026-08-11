@@ -2,12 +2,12 @@ import { Injectable } from '@angular/core';
 import { Channel, invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { documentDir, join } from '@tauri-apps/api/path';
-import { mkdir, exists } from '@tauri-apps/plugin-fs';
+import { mkdir, exists, stat, writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener';
 import {
   CompressOptions, ImagesOptions, InputFile, MergeOptions, OperationResult,
-  PdfMetadata, ProgressPayload, RecentFile, SecurityOptions, SplitOptions,
-  ExtractImageFormat, PageOp,
+  OutputFile, PdfMetadata, ProgressPayload, RecentFile, SecurityOptions, SplitOptions,
+  PageOp,
 } from './models';
 
 const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'heic', 'heif'];
@@ -69,12 +69,45 @@ export class PdfService {
     return invoke<OperationResult>('set_metadata', { path, metadata, outDir });
   }
 
-  extractText(path: string, outDir: string, onProgress: (p: ProgressPayload) => void) {
-    return invoke<OperationResult>('extract_text', { path, outDir, onProgress: this.channel(onProgress) });
+  /**
+   * Writes bytes produced in the frontend (pdf.js renders text and images
+   * locally) into the output folder, never overwriting an existing file.
+   */
+  async writeOutput(outDir: string, name: string, data: Uint8Array | string): Promise<OutputFile> {
+    const path = await this.uniqueOutputPath(outDir, name);
+    if (typeof data === 'string') {
+      await writeTextFile(path, data);
+    } else {
+      await writeFile(path, data);
+    }
+    return {
+      name: path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1),
+      path,
+      size: await this.sizeOf(path),
+    };
   }
 
-  pagesToImages(path: string, imageFormat: ExtractImageFormat, dpi: number, outDir: string, onProgress: (p: ProgressPayload) => void) {
-    return invoke<OperationResult>('pages_to_images', { path, imageFormat, dpi, outDir, onProgress: this.channel(onProgress) });
+  /** Mirrors the Rust `unique_path` helper: `name.txt`, `name (2).txt`, … */
+  private async uniqueOutputPath(outDir: string, name: string): Promise<string> {
+    const safe = sanitizeFileName(name);
+    const first = await join(outDir, safe);
+    if (!(await exists(first))) return first;
+
+    const dot = safe.lastIndexOf('.');
+    const stem = dot > 0 ? safe.slice(0, dot) : safe;
+    const ext = dot > 0 ? safe.slice(dot) : '';
+    for (let n = 2; ; n++) {
+      const candidate = await join(outDir, `${stem} (${n})${ext}`);
+      if (!(await exists(candidate))) return candidate;
+    }
+  }
+
+  private async sizeOf(path: string): Promise<number> {
+    try {
+      return (await stat(path)).size;
+    } catch {
+      return 0;
+    }
   }
 
   organizePdf(path: string, pages: PageOp[], outDir: string, onProgress: (p: ProgressPayload) => void) {
@@ -107,4 +140,14 @@ export class PdfService {
     ch.onmessage = cb;
     return ch;
   }
+}
+
+/** Keeps generated names from escaping the output folder or upsetting the OS. */
+function sanitizeFileName(name: string): string {
+  const cleaned = name
+    .replace(/[/\\]/g, '-')
+    // eslint-disable-next-line no-control-regex
+    .replace(/[<>:"|?*\u0000-\u001f]/g, '')
+    .trim();
+  return cleaned || 'output';
 }

@@ -1,8 +1,9 @@
-//! Reorder, rotate, and delete pages, producing a new PDF.
+//! Reorder, rotate, duplicate, and delete pages, producing a new PDF.
 
+use std::collections::HashMap;
 use std::path::Path;
 
-use lopdf::{Document, Object};
+use lopdf::{Dictionary, Document, Object};
 use tauri::ipc::Channel;
 
 use super::model::{OperationResult, OutputFile, PageOp, Progress};
@@ -30,18 +31,42 @@ pub fn organize_pdf(
         .as_reference()
         .map_err(|_| "Invalid PDF (bad page tree).".to_string())?;
 
+    // Snapshot each page's starting rotation before anything is mutated. Reading
+    // it back off the dictionary mid-loop would compound the added rotation every
+    // time a page appears more than once.
+    let base_rotations: HashMap<u32, i64> = page_map
+        .iter()
+        .map(|(&page_no, &pid)| (page_no, inherited_rotation(&doc, pid)))
+        .collect();
+
     let mut kids: Vec<Object> = Vec::new();
+    let mut used: Vec<u32> = Vec::new();
+
     for op in &pages {
         let Some(&pid) = page_map.get(&op.source) else { continue };
-        if let Ok(obj) = doc.get_object_mut(pid) {
+
+        let base = base_rotations.get(&op.source).copied().unwrap_or(0);
+        let rot = (((base + op.rotate as i64) % 360) + 360) % 360;
+
+        // The first appearance reuses the original object. Later ones need a copy:
+        // repeating an object id in /Kids would make the page tree a DAG, and the
+        // duplicates would share one dictionary — so rotation, annotations and
+        // later page deletions would all alias across every instance.
+        let target = if used.contains(&op.source) {
+            let Some(copy) = clone_page_dict(&doc, pid) else { continue };
+            doc.add_object(Object::Dictionary(copy))
+        } else {
+            used.push(op.source);
+            pid
+        };
+
+        if let Ok(obj) = doc.get_object_mut(target) {
             if let Ok(dict) = obj.as_dict_mut() {
-                let existing = dict.get(b"Rotate").ok().and_then(|o| o.as_i64().ok()).unwrap_or(0);
-                let rot = (((existing + op.rotate as i64) % 360) + 360) % 360;
                 dict.set("Rotate", rot);
                 dict.set("Parent", Object::Reference(root_id));
             }
         }
-        kids.push(Object::Reference(pid));
+        kids.push(Object::Reference(target));
     }
     if kids.is_empty() {
         return Err("No matching pages to keep.".to_string());
@@ -73,4 +98,30 @@ pub fn organize_pdf(
         }],
         out_dir,
     })
+}
+
+/// `/Rotate` is an inheritable attribute, so a page may get its value from an
+/// ancestor `Pages` node. Walking the `/Parent` chain avoids writing an explicit
+/// `/Rotate 0` that would shadow an inherited rotation once the tree is rebuilt.
+fn inherited_rotation(doc: &Document, page_id: (u32, u16)) -> i64 {
+    let mut current = page_id;
+    // Bounded so a malformed document with a cyclic /Parent chain can't hang.
+    for _ in 0..32 {
+        let Ok(dict) = doc.get_object(current).and_then(|o| o.as_dict()) else { return 0 };
+        if let Some(rotate) = dict.get(b"Rotate").ok().and_then(|o| o.as_i64().ok()) {
+            return rotate;
+        }
+        match dict.get(b"Parent").ok().and_then(|o| o.as_reference().ok()) {
+            Some(parent) => current = parent,
+            None => return 0,
+        }
+    }
+    0
+}
+
+/// Copies a page dictionary so a duplicated page becomes its own object. The
+/// content streams and resources stay shared by reference, which is what we want
+/// — only the page node itself needs to be distinct.
+fn clone_page_dict(doc: &Document, page_id: (u32, u16)) -> Option<Dictionary> {
+    doc.get_object(page_id).ok()?.as_dict().ok().cloned()
 }

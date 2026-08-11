@@ -20,18 +20,12 @@ tauri-plugin-fs = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
-# PDF + image processing (all local, no network)
+# PDF + image processing (all local, no network).
+# Page rasterisation and text extraction happen in the frontend via pdf.js, so
+# there is no native rendering library to bundle and no optional build features.
 lopdf = "0.44.0"
 image = "0.25"
 rand = "0.10.2"
-
-# Optional: PDF page rasterization (Extract -> pages as images).
-# Enable with `--features render`; requires the pdfium library at runtime.
-pdfium-render = { version = "0.9.3", optional = true }
-
-[features]
-# Rasterize PDF pages to images via pdfium (opt-in native dependency).
-render = ["dep:pdfium-render"]
 
 [profile.release]
 codegen-units = 1

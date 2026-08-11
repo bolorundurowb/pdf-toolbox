@@ -1,8 +1,8 @@
 @if (runner.stage() === 'idle') {
-  <div class="p-padding-lg max-w-3xl mx-auto w-full space-y-container-gap overflow-y-auto custom-scrollbar h-full">
+  <div class="p-padding-lg max-w-5xl mx-auto w-full space-y-container-gap overflow-y-auto custom-scrollbar h-full flex flex-col">
     <div>
       <h2 class="text-display text-on-surface">Extract</h2>
-      <p class="text-body-lg text-on-surface-variant mt-1">Pull text out of a PDF, or export its pages as images.</p>
+      <p class="text-body-lg text-on-surface-variant mt-1">Pick the pages you want, then pull them out as text, images or a new PDF.</p>
     </div>
 
     @if (!file()) {
@@ -12,40 +12,35 @@
         <p class="text-on-surface-variant text-body-md">or click to browse your files</p>
       </div>
     } @else {
-      <div class="bg-surface border border-outline-variant rounded-xl overflow-hidden">
+      <div class="bg-surface border border-outline-variant rounded-xl flex-1 flex flex-col overflow-hidden">
         <div class="px-6 py-4 border-b border-outline-variant flex items-center gap-3">
           <div class="w-9 h-11 bg-error/10 border border-error/20 rounded flex items-center justify-center text-error"><span class="material-symbols-outlined icon-sm">picture_as_pdf</span></div>
           <div class="flex-1 min-w-0">
             <p class="font-medium truncate">{{ file()!.name }}</p>
-            <p class="text-label-md text-on-surface-variant font-mono-sm">{{ file()!.pages ?? '—' }} pages · {{ fmtBytes(file()!.size) }}</p>
+            <p class="text-label-md text-on-surface-variant font-mono-sm">{{ totalPages() }} pages · {{ fmtBytes(file()!.size) }} · {{ summary() }}</p>
           </div>
-          <button (click)="clearFile()" class="px-4 py-2 border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-container transition-all flex items-center gap-2"><span class="material-symbols-outlined">change_circle</span> Change</button>
+          <button (click)="clearFile()" class="px-4 py-2 border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-container transition-all flex items-center gap-2"><span class="material-symbols-outlined icon-sm">change_circle</span> Change</button>
         </div>
 
-        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div (click)="setMode('text')" class="p-4 border rounded-xl hover:border-primary transition-all cursor-pointer"
-               [class.border-primary]="mode()==='text'" [class.bg-surface-container-low]="mode()==='text'" [class.border-outline-variant]="mode()!=='text'">
-            <div class="flex items-center gap-3 mb-2">
-              <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary"><span class="material-symbols-outlined">article</span></div>
-              <h4 class="font-bold text-on-surface">Extract Text</h4>
-              <input type="radio" name="ex-mode" class="ml-auto accent-primary h-5 w-5" [checked]="mode()==='text'" (change)="setMode('text')" />
-            </div>
-            <p class="text-body-md text-on-surface-variant">Save all readable text to a .txt file.</p>
-          </div>
-
-          <div (click)="setMode('images')" class="p-4 border rounded-xl hover:border-primary transition-all cursor-pointer"
-               [class.border-primary]="mode()==='images'" [class.bg-surface-container-low]="mode()==='images'" [class.border-outline-variant]="mode()!=='images'">
-            <div class="flex items-center gap-3 mb-2">
-              <div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center text-secondary"><span class="material-symbols-outlined">image</span></div>
-              <h4 class="font-bold text-on-surface">Pages as Images</h4>
-              <input type="radio" name="ex-mode" class="ml-auto accent-primary h-5 w-5" [checked]="mode()==='images'" (change)="setMode('images')" />
-            </div>
-            <p class="text-body-md text-on-surface-variant">Render each page to a PNG or JPG.</p>
-          </div>
+        <!-- Output mode -->
+        <div class="p-6 pb-0 grid grid-cols-2 lg:grid-cols-4 gap-3">
+          @for (m of modes; track m.id) {
+            <button type="button" (click)="setMode(m.id)"
+                    class="p-4 border rounded-xl text-left hover:border-primary transition-all"
+                    [class.border-primary]="mode() === m.id" [class.bg-surface-container-low]="mode() === m.id"
+                    [class.border-outline-variant]="mode() !== m.id">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="material-symbols-outlined icon-sm" [class.text-primary]="mode() === m.id" [class.text-on-surface-variant]="mode() !== m.id">{{ m.icon }}</span>
+                <h4 class="font-bold text-on-surface">{{ m.label }}</h4>
+              </div>
+              <p class="text-label-md text-on-surface-variant">{{ m.hint }}</p>
+            </button>
+          }
         </div>
 
+        <!-- Mode options -->
         @if (mode() === 'images') {
-          <div class="px-6 pb-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div class="px-6 pt-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div class="space-y-2">
               <label class="font-label-md text-on-surface-variant block uppercase tracking-wider">Format</label>
               <div class="flex bg-surface-container-high rounded p-1">
@@ -61,18 +56,61 @@
                 @for (d of dpis; track d) { <option [value]="d">{{ d }} DPI</option> }
               </select>
             </div>
-            <p class="sm:col-span-2 text-label-md text-on-surface-variant flex items-center gap-2">
-              <span class="material-symbols-outlined text-outline icon-sm">info</span>
-              Page rendering needs the pdfium library (bundled via <span class="font-mono-sm">--features render</span>). See README.
-            </p>
           </div>
         }
 
-        <div class="px-6 py-4 bg-surface-container-low border-t border-outline-variant flex justify-end">
+        @if (mode() === 'size') {
+          <div class="px-6 pt-6 max-w-xs space-y-2">
+            <label class="font-label-md text-on-surface-variant block uppercase tracking-wider">Max size per file (MB)</label>
+            <input type="number" min="1" [value]="maxSizeMb()" (input)="maxSizeMb.set(+$any($event.target).value || 1)"
+                   class="w-full px-4 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono-sm bg-surface" />
+            <p class="text-label-md text-on-surface-variant">Pages are divided evenly, so part sizes are approximate.</p>
+          </div>
+        }
+
+        <div class="px-6 pt-6 max-w-sm space-y-2">
+          <label class="font-label-md text-on-surface-variant block uppercase tracking-wider">Output filename</label>
+          <input type="text" [value]="outputName()" (input)="outputName.set($any($event.target).value)"
+                 [placeholder]="file()!.name.replace('.pdf', '')"
+                 class="w-full px-4 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary bg-surface" />
+        </div>
+
+        <!-- Page picker -->
+        @if (usesSelection()) {
+          <div class="px-6 pt-6 flex flex-wrap items-center gap-2">
+            <span class="font-label-md text-on-surface-variant uppercase tracking-wider mr-1">Pages</span>
+            <button (click)="selectAll(true)" class="px-3 py-1.5 border border-outline-variant rounded-lg text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">All</button>
+            <button (click)="selectAll(false)" class="px-3 py-1.5 border border-outline-variant rounded-lg text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">None</button>
+            <button (click)="selectParity(1)" class="px-3 py-1.5 border border-outline-variant rounded-lg text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">Odd</button>
+            <button (click)="selectParity(0)" class="px-3 py-1.5 border border-outline-variant rounded-lg text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">Even</button>
+            <button (click)="invertSelection()" class="px-3 py-1.5 border border-outline-variant rounded-lg text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">Invert</button>
+            <input type="text" [value]="rangeText()" (input)="onRangeInput($event)" placeholder="1-5, 8, 11-13"
+                   aria-label="Page ranges"
+                   class="flex-1 min-w-[12rem] px-4 py-1.5 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono-sm bg-surface" />
+          </div>
+
+          <div class="p-6 overflow-y-auto custom-scrollbar flex-1">
+            @if (totalPages() === 0) {
+              <p class="text-on-surface-variant text-body-md text-center py-10">This PDF has no pages.</p>
+            } @else {
+              <app-page-grid [path]="file()!.path" [pages]="tiles()" mode="select" [columns]="6" (toggle)="toggle($event)" />
+            }
+          </div>
+        } @else {
+          <div class="p-6 flex-1">
+            <div class="bg-secondary-container/20 border border-secondary-container rounded-xl p-6 flex gap-4">
+              <span class="material-symbols-outlined text-secondary">info</span>
+              <p class="text-on-secondary-container/80 text-body-md">Splitting by size uses the whole document, so individual page selection doesn’t apply here.</p>
+            </div>
+          </div>
+        }
+
+        <div class="px-6 py-4 bg-surface-container-low border-t border-outline-variant flex justify-between items-center">
+          <span class="text-label-md text-on-surface-variant">{{ summary() }}</span>
           <button (click)="run()" [disabled]="!canRun()"
                   class="bg-primary text-on-primary px-8 py-3 rounded-lg font-label-md flex items-center gap-2 shadow-sm hover:brightness-110 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-            <span class="material-symbols-outlined icon-sm">{{ mode()==='text' ? 'article' : 'image' }}</span>
-            {{ mode()==='text' ? 'Extract Text' : 'Export Images' }}
+            <span class="material-symbols-outlined icon-sm">{{ mode() === 'text' ? 'article' : mode() === 'images' ? 'image' : mode() === 'pdf' ? 'picture_as_pdf' : 'call_split' }}</span>
+            {{ runLabel() }}
           </button>
         </div>
       </div>
@@ -81,6 +119,6 @@
 } @else {
   <app-process-status [stage]="runner.stage() === 'processing' ? 'processing' : runner.stage() === 'done' ? 'done' : 'error'"
     [progress]="runner.progress()" [message]="runner.message()" [result]="runner.result()" [error]="runner.error()"
-    [doneTitle]="mode()==='text' ? 'Text extracted' : 'Pages exported'" icon="article"
+    [doneTitle]="doneTitle()" icon="article"
     (reset)="reset()" (openFolder)="openResultFolder()" (openFile)="pdf.openPath($event)" />
 }
