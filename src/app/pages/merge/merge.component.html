@@ -1,0 +1,105 @@
+@if (runner.stage() === 'idle') {
+  <div class="p-padding-lg flex flex-col gap-6 h-full overflow-y-auto custom-scrollbar">
+    <div>
+      <h2 class="text-headline-lg text-on-surface">Merge PDFs</h2>
+      <p class="text-on-surface-variant text-body-md">Combine several documents into one, in the order you choose.</p>
+    </div>
+
+    <div class="grid grid-cols-12 gap-6 items-start">
+      <!-- LEFT -->
+      <div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+        <div (click)="addFiles()"
+             class="h-44 rounded-xl flex flex-col items-center justify-center border-2 border-dashed transition-colors cursor-pointer group"
+             [class]="dropActive() ? 'border-primary bg-primary/5' : 'border-outline-variant hover:border-primary/50 hover:bg-primary/5'">
+          <div class="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center text-primary mb-3 group-hover:scale-110 transition-transform">
+            <span class="material-symbols-outlined icon-2xl">cloud_upload</span>
+          </div>
+          <p class="text-headline-md text-on-surface">Drag and drop PDFs here</p>
+          <p class="text-on-surface-variant text-body-md mt-1">or <span class="text-primary font-bold">browse files</span></p>
+        </div>
+
+        @if (files().length > 0) {
+          <div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+            <div class="px-6 py-4 border-b border-outline-variant flex items-center justify-between">
+              <h3 class="font-bold text-on-surface">Files to combine ({{ files().length }})</h3>
+              <button (click)="clearAll()" class="text-primary font-label-md hover:underline">Clear all</button>
+            </div>
+            <div class="divide-y divide-outline-variant">
+              @for (f of files(); track f.key; let i = $index) {
+                <div [appReorderItem]="i" appReorderAxis="list" [appReorderTotal]="files().length"
+                     (appReorder)="onReorder($event)" tabindex="0"
+                     [attr.aria-label]="f.name"
+                     class="px-6 py-4 flex items-center gap-4 hover:bg-surface-container-low transition-colors group cursor-grab active:cursor-grabbing">
+                  <span class="material-symbols-outlined text-outline">drag_indicator</span>
+                  <div class="w-10 h-12 bg-error/10 border border-error/20 rounded flex items-center justify-center text-error shrink-0">
+                    <span class="material-symbols-outlined icon-md">description</span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="font-medium text-on-surface truncate">{{ f.name }}</p>
+                    <p class="text-label-md font-mono-sm" [class.text-on-surface-variant]="!f.error" [class.text-error]="f.error">{{ f.error || fileMeta(f) }}</p>
+                  </div>
+                  <button (click)="remove(i)" class="p-2 text-on-surface-variant hover:text-error hover:bg-error/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span class="material-symbols-outlined">delete</span>
+                  </button>
+                </div>
+              }
+            </div>
+            <div class="bg-surface-container-low px-6 py-4 border-t border-outline-variant flex justify-center">
+              <button (click)="addFiles()" class="text-primary font-bold flex items-center gap-2 hover:bg-primary/5 px-4 py-2 rounded-lg transition-colors">
+                <span class="material-symbols-outlined">add_circle</span> Add more files
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- RIGHT -->
+      <div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+        <div class="bg-surface-container-highest rounded-xl p-6 border border-outline-variant">
+          <h3 class="font-bold text-on-surface mb-4">Summary</h3>
+          <div class="space-y-4">
+            <div class="flex justify-between text-body-md"><span class="text-on-surface-variant">Input:</span><span class="font-medium text-on-surface">{{ okFiles().length }} files</span></div>
+            <div class="flex justify-between text-body-md"><span class="text-on-surface-variant">Pages:</span><span class="font-medium text-on-surface font-mono-sm">{{ totalPages() }}</span></div>
+            <div class="flex justify-between text-body-md"><span class="text-on-surface-variant">Total size:</span><span class="font-medium text-on-surface font-mono-sm">{{ fmtBytes(totalSize()) }}</span></div>
+            <div class="pt-4 border-t border-outline-variant">
+              <label class="block font-label-md text-on-surface-variant mb-2">Output filename</label>
+              <div class="relative">
+                <input [value]="outputName()" (input)="outputName.set($any($event.target).value)" placeholder="Merged document" type="text"
+                       class="w-full px-4 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary pr-12 bg-surface" />
+                <span class="absolute right-4 top-2 text-on-surface-variant font-label-md">.pdf</span>
+              </div>
+            </div>
+          </div>
+          <button (click)="process()" [disabled]="!canRun()"
+                  class="w-full mt-8 bg-primary text-on-primary py-4 rounded-xl font-bold text-headline-md flex items-center justify-center gap-3 shadow-lg shadow-primary/20 hover:brightness-110 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none">
+            <span class="material-symbols-outlined">call_merge</span> Merge PDFs
+          </button>
+        </div>
+
+        <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-sm">
+          <h3 class="font-bold text-on-surface mb-4 flex items-center gap-2"><span class="material-symbols-outlined icon-sm">tune</span> Advanced options</h3>
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" [checked]="optimize()" (change)="optimize.set($any($event.target).checked)" class="rounded accent-primary h-5 w-5 border-outline-variant" />
+            <div class="flex-1">
+              <p class="font-medium text-on-surface text-body-md">Optimise output size</p>
+              <p class="text-label-md text-on-surface-variant">Recompress the merged file (pure Rust)</p>
+            </div>
+          </label>
+        </div>
+
+        <div class="bg-secondary-container/20 border border-secondary-container rounded-xl p-6 flex gap-4">
+          <span class="material-symbols-outlined text-secondary">lightbulb</span>
+          <div>
+            <p class="font-bold text-on-secondary-container text-body-md">Looking for split?</p>
+            <p class="text-on-secondary-container/80 text-body-sm mt-1">Head to <span class="font-bold">Extract</span> — pick the pages you want and save them as a new PDF, or divide the file by size.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+} @else {
+  <app-process-status [stage]="runner.stage() === 'processing' ? 'processing' : runner.stage() === 'done' ? 'done' : 'error'"
+    [progress]="runner.progress()" [message]="runner.message()" [result]="runner.result()" [error]="runner.error()"
+    doneTitle="PDFs merged" icon="call_merge"
+    (reset)="reset()" (openFolder)="openResultFolder()" (openFile)="pdf.openPath($event)" />
+}
