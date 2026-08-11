@@ -1,0 +1,55 @@
+<div class="grid gap-4" [style.grid-template-columns]="'repeat(' + columns() + ', minmax(0, 1fr))'">
+  @for (t of pages(); track t.key; let i = $index) {
+    <div [appReorderItem]="i" appReorderAxis="grid" [appReorderColumns]="columns()"
+         [appReorderTotal]="pages().length" [appReorderDisabled]="mode() !== 'edit'"
+         (appReorder)="reorder.emit($event)"
+         (click)="onTileClick(i)" (keydown)="onTileKey($event, i)"
+         [attr.role]="mode() === 'select' ? 'checkbox' : null"
+         [attr.aria-checked]="mode() === 'select' ? t.selected : null"
+         [attr.aria-label]="'Page ' + t.source"
+         tabindex="0"
+         [class]="mode() === 'edit' ? 'group relative cursor-grab active:cursor-grabbing' : 'group relative cursor-pointer'">
+
+      <div class="aspect-[3/4] bg-white border-2 rounded-lg shadow-sm overflow-hidden transition-colors"
+           [class.border-primary]="mode() === 'select' && t.selected"
+           [class.border-outline-variant]="!(mode() === 'select' && t.selected)">
+        <app-page-thumb [path]="path()" [page]="t.source" [rotate]="t.rotate" />
+      </div>
+
+      <!-- Position in the output, or the source page number when selecting. -->
+      <div class="absolute top-1 left-1 bg-surface/90 backdrop-blur rounded px-1.5 text-[10px] font-bold text-on-surface">
+        {{ mode() === 'select' ? t.source : i + 1 }}
+      </div>
+
+      @if (mode() === 'select') {
+        <div class="absolute top-1 right-1 w-5 h-5 rounded border-2 grid place-items-center transition-colors"
+             [class.bg-primary]="t.selected" [class.border-primary]="t.selected"
+             [class.bg-surface]="!t.selected" [class.border-outline-variant]="!t.selected">
+          @if (t.selected) {
+            <span class="material-symbols-outlined icon-xs text-on-primary">check</span>
+          }
+        </div>
+      } @else {
+        <div class="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+          <button type="button" (click)="rotate.emit(i)" title="Rotate 90°" aria-label="Rotate page"
+                  class="w-6 h-6 bg-surface/90 backdrop-blur rounded grid place-items-center text-on-surface-variant hover:text-primary shadow-sm">
+            <span class="material-symbols-outlined icon-xs">rotate_right</span>
+          </button>
+          <button type="button" (click)="duplicate.emit(i)" title="Duplicate" aria-label="Duplicate page"
+                  class="w-6 h-6 bg-surface/90 backdrop-blur rounded grid place-items-center text-on-surface-variant hover:text-primary shadow-sm">
+            <span class="material-symbols-outlined icon-xs">content_copy</span>
+          </button>
+          <button type="button" (click)="remove.emit(i)" title="Remove" aria-label="Remove page"
+                  class="w-6 h-6 bg-surface/90 backdrop-blur rounded grid place-items-center text-error hover:bg-error hover:text-on-error shadow-sm">
+            <span class="material-symbols-outlined icon-xs">delete</span>
+          </button>
+        </div>
+      }
+
+      <div class="mt-1 flex items-center justify-center gap-1 text-[10px] font-mono-sm text-on-surface-variant">
+        @if (mode() === 'edit') { <span>p{{ t.source }}</span> }
+        @if (t.rotate !== 0) { <span class="text-primary font-bold">{{ t.rotate }}°</span> }
+      </div>
+    </div>
+  }
+</div>
