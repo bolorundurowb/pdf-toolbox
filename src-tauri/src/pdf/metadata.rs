@@ -5,7 +5,7 @@ use std::path::Path;
 use lopdf::{Dictionary, Document, Object, StringFormat};
 
 use super::model::{OperationResult, OutputFile, PdfMetadata};
-use super::util::{file_size, stem, unique_path};
+use super::util::{check_file_limits, file_size, stem, unique_path};
 
 fn decode_text(bytes: &[u8]) -> String {
     if bytes.len() >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF {
@@ -41,7 +41,8 @@ fn read_field(dict: &Dictionary, key: &[u8]) -> String {
 }
 
 pub fn get_metadata(path: &str) -> Result<PdfMetadata, String> {
-    let doc = Document::load(path).map_err(|_| "Couldn't read this PDF.".to_string())?;
+    check_file_limits(Path::new(path))?;
+    let doc = Document::load(path).map_err(|e| format!("Couldn't read this PDF: {e}"))?;
     let info = doc
         .trailer
         .get(b"Info")
@@ -66,7 +67,8 @@ pub fn get_metadata(path: &str) -> Result<PdfMetadata, String> {
 }
 
 pub fn set_metadata(path: &str, meta: PdfMetadata, out_dir: &str) -> Result<OperationResult, String> {
-    let mut doc = Document::load(path).map_err(|_| "Couldn't read this PDF.".to_string())?;
+    check_file_limits(Path::new(path))?;
+    let mut doc = Document::load(path).map_err(|e| format!("Couldn't read this PDF: {e}"))?;
 
     let entries: [(&[u8], &str); 5] = [
         (b"Title", &meta.title),

@@ -11,7 +11,7 @@ use rand::RngExt;
 use tauri::ipc::Channel;
 
 use super::model::{OperationResult, OutputFile, Progress, SecurityOptions};
-use super::util::{file_size, stem, unique_path};
+use super::util::{check_files_limits, file_size, report, stem, unique_path};
 
 fn default_permissions() -> Permissions {
     Permissions::PRINTABLE
@@ -95,6 +95,7 @@ pub fn encrypt_pdfs(
     if options.user_password.is_empty() {
         return Err("Enter a user password.".to_string());
     }
+    check_files_limits(&paths)?;
 
     let owner = options
         .owner_password
@@ -107,7 +108,7 @@ pub fn encrypt_pdfs(
 
     for (i, path) in paths.iter().enumerate() {
         let name = format!("{} (protected).pdf", stem(Path::new(path)));
-        let _ = on_progress.send(Progress::new(i as u32, total, format!("Protecting {name}")));
+        report(on_progress, Progress::new(i as u32, total, format!("Protecting {name}")))?;
         let out_path = unique_path(Path::new(&out_dir), &name);
 
         let mut doc = Document::load(path).map_err(|e| map_crypto_error(e, &name))?;
@@ -135,13 +136,14 @@ pub fn decrypt_pdfs(
     if paths.is_empty() {
         return Err("No PDFs to unlock.".to_string());
     }
+    check_files_limits(&paths)?;
 
     let total = paths.len() as u32;
     let mut files = Vec::new();
 
     for (i, path) in paths.iter().enumerate() {
         let name = format!("{} (unlocked).pdf", stem(Path::new(path)));
-        let _ = on_progress.send(Progress::new(i as u32, total, format!("Unlocking {name}")));
+        report(on_progress, Progress::new(i as u32, total, format!("Unlocking {name}")))?;
         let out_path = unique_path(Path::new(&out_dir), &name);
 
         let mut doc = Document::load_with_options(path, LoadOptions::with_password(&password))

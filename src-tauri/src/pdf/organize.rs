@@ -7,7 +7,7 @@ use lopdf::{Dictionary, Document, Object};
 use tauri::ipc::Channel;
 
 use super::model::{OperationResult, OutputFile, PageOp, Progress};
-use super::util::{file_size, stem, unique_path};
+use super::util::{check_file_limits, file_size, report, stem, unique_path};
 
 pub fn organize_pdf(
     path: String,
@@ -18,18 +18,19 @@ pub fn organize_pdf(
     if pages.is_empty() {
         return Err("Keep at least one page.".to_string());
     }
-    let _ = on_progress.send(Progress::new(0, 1, "Reorganizing…"));
+    check_file_limits(Path::new(&path))?;
+    report(on_progress, Progress::new(0, 1, "Reorganizing…"))?;
 
-    let mut doc = Document::load(&path).map_err(|_| "Couldn't read this PDF.".to_string())?;
+    let mut doc = Document::load(&path).map_err(|e| format!("Couldn't read this PDF: {e}"))?;
     let page_map = doc.get_pages(); // 1-based → object id
 
     let root_id = doc
         .catalog()
-        .map_err(|_| "Invalid PDF (no catalog).".to_string())?
+        .map_err(|e| format!("Invalid PDF (no catalog): {e}"))?
         .get(b"Pages")
-        .map_err(|_| "Invalid PDF (no page tree).".to_string())?
+        .map_err(|e| format!("Invalid PDF (no page tree): {e}"))?
         .as_reference()
-        .map_err(|_| "Invalid PDF (bad page tree).".to_string())?;
+        .map_err(|e| format!("Invalid PDF (bad page tree): {e}"))?;
 
     // Snapshot each page's starting rotation before anything is mutated. Reading
     // it back off the dictionary mid-loop would compound the added rotation every

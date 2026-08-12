@@ -10,4 +10,5 @@ pub mod organize;
 pub mod recents;
 pub mod security;
 pub mod split;
+pub mod update;
 pub mod util;

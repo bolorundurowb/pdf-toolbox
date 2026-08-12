@@ -9,6 +9,7 @@ use pdf::model::{
     CompressOptions, FileInfo, ImagesOptions, MergeOptions, OperationResult, PageOp, PdfMetadata,
     Progress, RecentFile, SecurityOptions, SplitOptions,
 };
+use pdf::update::UpdateInfo;
 
 #[tauri::command]
 async fn inspect_files(paths: Vec<String>) -> Result<Vec<FileInfo>, String> {
@@ -109,7 +110,7 @@ async fn recent_outputs(app: tauri::AppHandle) -> Result<Vec<RecentFile>, String
         .path()
         .document_dir()
         .map(|d| d.join("PDF Toolbox"))
-        .map_err(|_| "Couldn't resolve the documents folder.".to_string())?;
+        .map_err(|e| format!("Couldn't resolve the documents folder: {e}"))?;
     let dir = dir.to_string_lossy().to_string();
     Ok(tauri::async_runtime::spawn_blocking(move || pdf::recents::recent_outputs(&dir))
         .await
@@ -124,6 +125,18 @@ async fn organize_pdf(
     on_progress: Channel<Progress>,
 ) -> Result<OperationResult, String> {
     tauri::async_runtime::spawn_blocking(move || pdf::organize::organize_pdf(path, pages, out_dir, &on_progress))
+        .await
+        .map_err(|e| format!("Task failed: {e}"))?
+}
+
+#[tauri::command]
+fn app_version() -> String {
+    pdf::update::app_version()
+}
+
+#[tauri::command]
+async fn check_update() -> Result<UpdateInfo, String> {
+    tauri::async_runtime::spawn_blocking(|| pdf::update::check_update())
         .await
         .map_err(|e| format!("Task failed: {e}"))?
 }
@@ -146,6 +159,8 @@ pub fn run() {
             set_metadata,
             recent_outputs,
             organize_pdf,
+            app_version,
+            check_update,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

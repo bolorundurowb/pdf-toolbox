@@ -8,7 +8,7 @@ use lopdf::{Document, Object, ObjectId};
 use tauri::ipc::Channel;
 
 use super::model::{MergeOptions, OperationResult, OutputFile, Progress};
-use super::util::{file_size, unique_path};
+use super::util::{check_files_limits, file_size, report, short_filename, unique_path};
 
 fn type_of(object: &Object) -> Option<String> {
     object
@@ -28,8 +28,9 @@ pub fn merge_pdfs(
     if paths.is_empty() {
         return Err("No PDFs to merge.".to_string());
     }
+    check_files_limits(&paths)?;
     let total = paths.len() as u32;
-    let _ = on_progress.send(Progress::new(0, total, "Reading PDFs…"));
+    report(on_progress, Progress::new(0, total, "Reading PDFs…"))?;
 
     let mut max_id = 1u32;
     let mut documents_pages: BTreeMap<ObjectId, Object> = BTreeMap::new();
@@ -38,7 +39,7 @@ pub fn merge_pdfs(
 
     for (i, path) in paths.iter().enumerate() {
         let mut doc = Document::load(path)
-            .map_err(|_| format!("Couldn't read {}", short(path)))?;
+            .map_err(|e| format!("Couldn't read {}: {e}", short_filename(path)))?;
         doc.renumber_objects_with(max_id);
         max_id = doc.max_id + 1;
 
@@ -55,11 +56,11 @@ pub fn merge_pdfs(
         );
         documents_objects.extend(doc.objects);
 
-        let _ = on_progress.send(Progress::new(
+        report(on_progress, Progress::new(
             (i + 1) as u32,
             total,
-            format!("Added {}", short(path)),
-        ));
+            format!("Added {}", short_filename(path)),
+        ))?;
     }
 
     let mut catalog_object: Option<(ObjectId, Object)> = None;
@@ -169,12 +170,4 @@ pub fn merge_pdfs(
         }],
         out_dir,
     })
-}
-
-fn short(path: &str) -> String {
-    Path::new(path)
-        .file_name()
-        .and_then(|s| s.to_str())
-        .unwrap_or(path)
-        .to_string()
 }

@@ -9,7 +9,7 @@ use lopdf::{dictionary, Dictionary, Document, Object, Stream};
 use tauri::ipc::Channel;
 
 use super::model::{ImagesOptions, OperationResult, OutputFile, Progress};
-use super::util::{file_size, unique_path};
+use super::util::{check_files_limits, file_size, report, short_filename, unique_path};
 
 pub fn images_to_pdf(
     paths: Vec<String>,
@@ -20,6 +20,7 @@ pub fn images_to_pdf(
     if paths.is_empty() {
         return Err("No images to convert.".to_string());
     }
+    check_files_limits(&paths)?;
     let total = paths.len() as u32;
 
     let mut doc = Document::with_version("1.5");
@@ -28,7 +29,7 @@ pub fn images_to_pdf(
     let mut page_ids: Vec<Object> = Vec::new();
 
     for (i, path) in paths.iter().enumerate() {
-        let _ = on_progress.send(Progress::new(i as u32, total, format!("Adding {}", short(path))));
+        report(on_progress, Progress::new(i as u32, total, format!("Adding {}", short_filename(path))))?;
 
         let img = load_image(path)?;
         let rgb = img.to_rgb8();
@@ -38,7 +39,7 @@ pub fn images_to_pdf(
         {
             let mut enc = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut jpeg, options.quality.clamp(10, 100));
             enc.encode(rgb.as_raw(), w, h, image::ExtendedColorType::Rgb8)
-                .map_err(|e| format!("Couldn't encode {}: {e}", short(path)))?;
+                .map_err(|e| format!("Couldn't encode {}: {e}", short_filename(path)))?;
         }
 
         let img_id = doc.add_object(Stream::new(
@@ -121,7 +122,6 @@ pub fn images_to_pdf(
         .map_err(|e| format!("Couldn't save PDF: {e}"))?;
 
     let _ = on_progress.send(Progress::new(total, total, "Done"));
-
     Ok(OperationResult {
         files: vec![OutputFile {
             name: out_path
@@ -139,7 +139,7 @@ pub fn images_to_pdf(
 
 fn load_image(path: &str) -> Result<DynamicImage, String> {
     let p = Path::new(path);
-    image::open(p).map_err(|e| format!("Couldn't read {}: {e}", short(path)))
+    image::open(p).map_err(|e| format!("Couldn't read {}: {e}", short_filename(path)))
 }
 
 /// Returns `(page_w, page_h, draw_x, draw_y, draw_w, draw_h)` in PDF points.
@@ -181,11 +181,4 @@ fn real(v: f64) -> Object {
     Object::Real(v as f32)
 }
 
-fn short(path: &str) -> String {
-    Path::new(path)
-        .file_name()
-        .and_then(|s| s.to_str())
-        .unwrap_or(path)
-        .to_string()
-}
 

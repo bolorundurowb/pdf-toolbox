@@ -7,7 +7,7 @@ use lopdf::Document;
 use tauri::ipc::Channel;
 
 use super::model::{OperationResult, OutputFile, Progress, SplitOptions};
-use super::util::{file_size, parse_ranges, stem, unique_path};
+use super::util::{check_file_limits, file_size, parse_ranges, report, stem, unique_path};
 
 pub fn split_pdf(
     path: String,
@@ -15,12 +15,12 @@ pub fn split_pdf(
     out_dir: String,
     on_progress: &Channel<Progress>,
 ) -> Result<OperationResult, String> {
-    let src = Document::load(&path).map_err(|_| "Couldn't read this PDF.".to_string())?;
+    check_file_limits(Path::new(&path))?;
+    let src = Document::load(&path).map_err(|e| format!("Couldn't read this PDF: {e}"))?;
     let page_count = src.get_pages().len() as u32;
     if page_count == 0 {
         return Err("This PDF has no pages.".to_string());
     }
-    drop(src);
 
     let base = options
         .output_name
@@ -78,9 +78,9 @@ pub fn split_pdf(
     let mut files = Vec::new();
 
     for (i, (name, keep)) in subsets.into_iter().enumerate() {
-        let _ = on_progress.send(Progress::new(i as u32, total, format!("Writing {name}")));
+        report(on_progress, Progress::new(i as u32, total, format!("Writing {name}")))?;
 
-        let mut doc = Document::load(&path).map_err(|_| "Couldn't read this PDF.".to_string())?;
+        let mut doc = src.clone();
         let to_delete: Vec<u32> = (1..=page_count).filter(|p| !keep.contains(p)).collect();
         doc.delete_pages(&to_delete);
         doc.renumber_objects();

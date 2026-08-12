@@ -9,7 +9,7 @@ use lopdf::{Document, Object};
 use tauri::ipc::Channel;
 
 use super::model::{CompressOptions, OperationResult, OutputFile, Progress};
-use super::util::{file_size, stem, unique_path};
+use super::util::{check_files_limits, file_size, report, stem, unique_path};
 
 struct Profile {
     /// `None` means no downscaling — the image is re-encoded at its original size.
@@ -120,15 +120,16 @@ pub fn compress_pdfs(
     if paths.is_empty() {
         return Err("No PDFs to compress.".to_string());
     }
+    check_files_limits(&paths)?;
     let total = paths.len() as u32;
     let mut files = Vec::new();
 
     for (i, path) in paths.iter().enumerate() {
         let name = format!("{} (compressed).pdf", stem(Path::new(path)));
-        let _ = on_progress.send(Progress::new(i as u32, total, format!("Compressing {name}")));
+        report(on_progress, Progress::new(i as u32, total, format!("Compressing {name}")))?;
 
         let in_size = file_size(Path::new(path));
-        let mut doc = Document::load(path).map_err(|_| format!("Couldn't read {name}."))?;
+        let mut doc = Document::load(path).map_err(|e| format!("Couldn't read {name}: {e}"))?;
 
         recompress_images(&mut doc, &options.level, options.grayscale);
         if options.remove_metadata {
