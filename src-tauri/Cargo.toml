@@ -27,6 +27,9 @@ lopdf = "0.44.0"
 image = "0.25"
 rand = "0.10.2"
 
+# GitHub release checker (lightweight, blocking HTTP)
+ureq = { version = "3", features = ["native-tls"] }
+
 [profile.release]
 codegen-units = 1
 lto = true
