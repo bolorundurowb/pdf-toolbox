@@ -105,3 +105,11 @@ export interface PageOp {
   /** Added rotation in degrees (0/90/180/270). */
   rotate: number;
 }
+
+export interface UpdateInfo {
+  currentVersion: string;
+  latestVersion?: string;
+  updateAvailable: boolean;
+  releaseUrl?: string;
+  releaseNotes?: string;
+}
