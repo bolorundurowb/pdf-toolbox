@@ -1,6 +1,6 @@
 [package]
 name = "pdf-toolbox"
-version = "0.2.3"
+version = "1.0.0"
 description = "A local, offline PDF tools suite"
 authors = ["Winner-Timothy Bolorunduro"]
 edition = "2021"
@@ -23,7 +23,7 @@ serde_json = "1"
 # PDF + image processing (all local, no network).
 # Page rasterisation and text extraction happen in the frontend via pdf.js, so
 # there is no native rendering library to bundle and no optional build features.
-lopdf = "0.44.0"
+lopdf = "0.45.0"
 image = "0.25"
 rand = "0.10.2"
 

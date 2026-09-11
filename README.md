@@ -18,6 +18,7 @@ computer — no uploads, no cloud, no account.
 | **Organise**     | Reorder, rotate, duplicate, or delete pages and save a new PDF                           |
 | **Compress**     | Shrink PDFs (Low / Recommended / Extreme), optional grayscale and strip metadata         |
 | **Extract**      | Pick pages, then save them as text, PNG/JPG images, or a new PDF — or split by file size |
+| **Convert**      | Convert a PDF into an editable Word document (.docx)                                   |
 | **Security**     | Add a password (AES-256, AES-128, or RC4) or remove one you already know                 |
 | **Metadata**     | View and edit Title, Author, Subject, Keywords, and Creator                              |
 
@@ -54,6 +55,7 @@ Outputs are saved under your Documents folder in **PDF Toolbox** by default
 - **Organize** — pages are shown as numbered tiles; reorder, rotate, or remove, then save.
 - **Security** — keep a copy of the password; locked PDFs cannot be recovered without it.
 - **Extract text** — works on PDFs that contain real text. Scanned image-only PDFs have nothing to extract (OCR is not included).
+- **Convert** — turns a PDF into a `.docx`, placing each page's text into Word as paragraphs; image-only (scanned) PDFs will convert to little or no text.
 
 ## Privacy
 

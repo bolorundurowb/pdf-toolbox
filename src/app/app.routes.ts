@@ -36,5 +36,9 @@ export const routes: Routes = [
     path: 'extract',
     loadComponent: () => import('./pages/extract/extract.component').then((m) => m.ExtractComponent),
   },
+  {
+    path: 'convert',
+    loadComponent: () => import('./pages/convert/convert.component').then((m) => m.ConvertComponent),
+  },
   { path: '**', redirectTo: 'dashboard' },
 ];
