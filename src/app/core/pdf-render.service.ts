@@ -15,6 +15,18 @@ export interface Thumbnail {
   height: number;
 }
 
+/** One glyph run reported by pdf.js, positioned for layout reconstruction. */
+export interface PdfTextItem {
+  str: string;
+  /** Horizontal start (PDF user space). */
+  x: number;
+  /** Baseline y (PDF user space; larger = higher on the page). */
+  y: number;
+  /** Approximate font size in points. */
+  fontSize: number;
+  hasEOL: boolean;
+}
+
 export class PdfPasswordError extends Error {
   constructor() {
     super('This PDF is password protected. Remove the password first (Security → Unlock).');
@@ -158,6 +170,33 @@ export class PdfRenderService implements OnDestroy {
         if (item.hasEOL) out += '\n';
       }
       return out;
+    } finally {
+      page.cleanup();
+    }
+  }
+
+  /**
+   * Extracts a page's positioned text runs. Unlike {@link pageText}, this keeps
+   * the geometry so callers can reconstruct paragraphs and reading order.
+   */
+  async pageTextItems(path: string, pageNo: number): Promise<PdfTextItem[]> {
+    const doc = await this.document(path);
+    const page = await doc.getPage(pageNo);
+    try {
+      const content = await page.getTextContent();
+      const items: PdfTextItem[] = [];
+      for (const item of content.items) {
+        if (!('str' in item) || !item.str) continue;
+        const t = item.transform;
+        items.push({
+          str: item.str,
+          x: t[4],
+          y: t[5],
+          fontSize: Math.hypot(t[2], t[3]),
+          hasEOL: item.hasEOL,
+        });
+      }
+      return items;
     } finally {
       page.cleanup();
     }

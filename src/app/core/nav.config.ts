@@ -11,6 +11,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Organise', icon: 'reorder', route: '/organize' },
   { label: 'Compress', icon: 'compress', route: '/compress' },
   { label: 'Extract', icon: 'article', route: '/extract' },
+  { label: 'Convert', icon: 'transform', route: '/convert' },
   { label: 'Security', icon: 'security', route: '/security' },
   { label: 'Metadata', icon: 'info', route: '/metadata' },
 ];
