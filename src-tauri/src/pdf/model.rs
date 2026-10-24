@@ -98,9 +98,20 @@ pub struct SplitOptions {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CompressOptions {
-    pub level: String, // "low" | "balanced" | "high"
+    /// "minimal" | "light" | "balanced" | "strong" | "extreme" ("low"/"high" still accepted).
+    pub level: String,
     pub grayscale: bool,
+    #[serde(default)]
     pub remove_metadata: bool,
+}
+
+/// Approximate result of compressing one file, shown before the user commits.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompressEstimate {
+    pub path: String,
+    pub original: u64,
+    pub estimated: u64,
 }
 
 #[derive(Debug, Clone, Deserialize)]

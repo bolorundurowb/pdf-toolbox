@@ -3,6 +3,8 @@
 
 use std::path::{Path, PathBuf};
 
+use lopdf::{Document, Object, StringFormat};
+use rand::RngExt;
 use tauri::ipc::Channel;
 
 use super::model::Progress;
@@ -112,6 +114,78 @@ pub fn short_filename(path: &str) -> String {
         .and_then(|s| s.to_str())
         .unwrap_or(path)
         .to_string()
+}
+
+/// Page attributes a page may inherit from an ancestor `/Pages` node (PDF 32000 §7.7.3.4).
+const INHERITABLE: [&[u8]; 4] = [b"Resources", b"MediaBox", b"CropBox", b"Rotate"];
+
+/// Copies inherited attributes onto every page dictionary.
+///
+/// Merge and Organise re-parent pages under a different `/Pages` node; without
+/// this, a page that relied on its old parent for its size, rotation or fonts
+/// would silently lose them (wrong page size, missing text or images).
+pub fn flatten_inherited_attributes(doc: &mut Document) {
+    for page_id in doc.get_pages().into_values() {
+        let Ok(page) = doc.get_dictionary(page_id) else { continue };
+        let mut missing: Vec<&[u8]> = INHERITABLE.iter().copied().filter(|k| !page.has(k)).collect();
+        let mut parent = page.get(b"Parent").and_then(Object::as_reference).ok();
+        let mut inherited: Vec<(&[u8], Object)> = Vec::new();
+
+        // Bounded so a malformed document with a cyclic /Parent chain can't hang.
+        for _ in 0..32 {
+            let Some(pid) = parent else { break };
+            if missing.is_empty() {
+                break;
+            }
+            let Ok(node) = doc.get_dictionary(pid) else { break };
+            missing.retain(|key| match node.get(key) {
+                Ok(value) => {
+                    inherited.push((key, value.clone()));
+                    false
+                }
+                Err(_) => true,
+            });
+            parent = node.get(b"Parent").and_then(Object::as_reference).ok();
+        }
+
+        if inherited.is_empty() {
+            continue;
+        }
+        if let Ok(page) = doc.get_dictionary_mut(page_id) {
+            for (key, value) in inherited {
+                page.set(key.to_vec(), value);
+            }
+        }
+    }
+}
+
+/// Gives the document a trailer `/ID` if it lacks one. AES-128 and RC4
+/// encryption derive their key from it, and many PDFs (including this app's own
+/// merge and image outputs) don't have one, so protecting them used to fail.
+pub fn ensure_file_id(doc: &mut Document) {
+    if doc.trailer.has(b"ID") {
+        return;
+    }
+    let mut id = [0u8; 16];
+    rand::rng().fill(&mut id);
+    doc.trailer.set(
+        "ID",
+        Object::Array(vec![
+            Object::String(id.to_vec(), StringFormat::Hexadecimal),
+            Object::String(id.to_vec(), StringFormat::Hexadecimal),
+        ]),
+    );
+}
+
+/// Without the password lopdf still "loads" an encrypted file, but with no
+/// usable objects — operations then wrote broken output or failed confusingly.
+pub fn ensure_unlocked(doc: &Document, name: &str) -> Result<(), String> {
+    if doc.is_encrypted() {
+        return Err(format!(
+            "{name} is password-protected. Remove the password first (Security → Remove Password)."
+        ));
+    }
+    Ok(())
 }
 
 /// Maximum file size the application will process (200 MB).

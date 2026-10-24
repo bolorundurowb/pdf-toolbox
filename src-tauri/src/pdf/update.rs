@@ -31,7 +31,13 @@ pub fn app_version() -> String {
 pub fn check_update() -> Result<UpdateInfo, String> {
     let current = app_version();
 
-    let response = ureq::get(REPO_URL)
+    // Without a timeout a stalled connection left "Checking for updates…" up forever.
+    let agent: ureq::Agent = ureq::Agent::config_builder()
+        .timeout_global(Some(std::time::Duration::from_secs(10)))
+        .build()
+        .into();
+    let response = agent
+        .get(REPO_URL)
         .header("User-Agent", "pdf-toolbox-update-check/1")
         .header("Accept", "application/vnd.github.v3+json")
         .call()

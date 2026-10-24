@@ -7,7 +7,7 @@ use lopdf::Document;
 use tauri::ipc::Channel;
 
 use super::model::{OperationResult, OutputFile, Progress, SplitOptions};
-use super::util::{check_file_limits, file_size, parse_ranges, report, stem, unique_path};
+use super::util::{check_file_limits, ensure_unlocked, file_size, parse_ranges, report, stem, unique_path};
 
 pub fn split_pdf(
     path: String,
@@ -17,6 +17,7 @@ pub fn split_pdf(
 ) -> Result<OperationResult, String> {
     check_file_limits(Path::new(&path))?;
     let src = Document::load(&path).map_err(|e| format!("Couldn't read this PDF: {e}"))?;
+    ensure_unlocked(&src, "This PDF")?;
     let page_count = src.get_pages().len() as u32;
     if page_count == 0 {
         return Err("This PDF has no pages.".to_string());
@@ -27,7 +28,7 @@ pub fn split_pdf(
         .as_deref()
         .map(|n| n.trim())
         .filter(|n| !n.is_empty())
-        .map(|n| n.trim_end_matches(".pdf").to_string())
+        .map(|n| strip_pdf_ext(n).to_string())
         .unwrap_or_else(|| stem(Path::new(&path)));
 
     let subsets: Vec<(String, Vec<u32>)> = match options.mode.as_str() {
@@ -83,6 +84,10 @@ pub fn split_pdf(
         let mut doc = src.clone();
         let to_delete: Vec<u32> = (1..=page_count).filter(|p| !keep.contains(p)).collect();
         doc.delete_pages(&to_delete);
+        // Drop the fonts, images and content streams only the deleted pages used;
+        // without this every part carried the whole document's resources, so
+        // "split by size" produced parts about as large as the original.
+        doc.prune_objects();
         doc.renumber_objects();
         doc.compress();
 
@@ -99,4 +104,13 @@ pub fn split_pdf(
 
     let _ = on_progress.send(Progress::new(total, total, "Done"));
     Ok(OperationResult { files, out_dir })
+}
+
+/// Strips a trailing `.pdf` regardless of case (`Report.PDF` → `Report`).
+fn strip_pdf_ext(name: &str) -> &str {
+    if name.len() >= 4 && name.is_char_boundary(name.len() - 4) && name[name.len() - 4..].eq_ignore_ascii_case(".pdf") {
+        &name[..name.len() - 4]
+    } else {
+        name
+    }
 }

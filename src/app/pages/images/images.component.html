@@ -8,7 +8,7 @@
       </div>
 
       <!-- Dropzone -->
-      <div (click)="addFiles()"
+      <div (click)="addFiles()" (keydown.enter)="addFiles()" role="button" tabindex="0"
            class="border-2 border-dashed border-outline-variant bg-surface-container-lowest rounded-xl flex flex-col items-center justify-center p-12 transition-all hover:bg-surface-container-low cursor-pointer group">
         <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
           <span class="material-symbols-outlined text-primary icon-2xl">cloud_upload</span>
@@ -29,7 +29,7 @@
             <button (click)="clearAll()" class="text-primary font-label-md hover:underline">Clear all</button>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            @for (f of files(); track f.path; let i = $index) {
+            @for (f of files(); track f.key; let i = $index) {
               <div [appReorderItem]="i" appReorderAxis="grid" [appReorderColumns]="columns()"
                    [appReorderTotal]="files().length" (appReorder)="onReorder($event)" tabindex="0"
                    [attr.aria-label]="f.name"
@@ -42,7 +42,7 @@
                   } @else {
                     <span class="material-symbols-outlined text-error icon-xl">broken_image</span>
                   }
-                  <button (click)="remove(i)" class="absolute top-2 right-2 w-8 h-8 bg-surface/80 backdrop-blur rounded flex items-center justify-center text-error hover:bg-error hover:text-white transition-colors shadow-sm">
+                  <button (click)="remove(i)" [attr.aria-label]="'Remove ' + f.name" title="Remove" class="absolute top-2 right-2 w-8 h-8 bg-surface/80 backdrop-blur rounded flex items-center justify-center text-error hover:bg-error hover:text-white transition-colors shadow-sm">
                     <span class="material-symbols-outlined icon-sm">delete</span>
                   </button>
                   @if (metaOf(f)) {
@@ -131,5 +131,6 @@
   <app-process-status [stage]="runner.stage() === 'processing' ? 'processing' : runner.stage() === 'done' ? 'done' : 'error'"
     [progress]="runner.progress()" [message]="runner.message()" [result]="runner.result()" [error]="runner.error()"
     doneTitle="PDF created" icon="picture_as_pdf"
-    (reset)="reset()" (openFolder)="openResultFolder()" (openFile)="pdf.openPath($event)" />
+    (reset)="reset()" (back)="runner.back()" (openFolder)="openResultFolder()" (openFile)="pdf.openPath($event)" />
 }
+<app-drop-overlay [active]="dropActive()" label="Drop images to add them" />

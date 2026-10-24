@@ -5,19 +5,36 @@ import { createRunner } from '../../core/runner';
 import { ImageOrientation, ImagePageSize, InputFile } from '../../core/models';
 import { formatBytes, pluralize } from '../../core/format';
 import { ProcessStatusComponent } from '../../shared/process-status.component';
+import { DropOverlayComponent } from '../../shared/drop-overlay.component';
+import { IMAGE_FILE, useFileDrop } from '../../core/file-drop';
 import { ReorderEvent, ReorderItemDirective, applyReorder } from '../../shared/reorder.directive';
+
+/**
+ * A queued image. The synthetic `key` keeps `@for` tracking unique when the same
+ * image is added twice (e.g. to repeat a page), which tracking by path would not.
+ */
+interface ImageItem extends InputFile {
+  key: number;
+}
 
 @Component({
   selector: 'app-images',
-  imports: [ProcessStatusComponent, ReorderItemDirective],
+  imports: [ProcessStatusComponent, ReorderItemDirective, DropOverlayComponent],
   templateUrl: './images.component.html',
 })
 export class ImagesComponent {
   readonly fmtBytes = formatBytes;
   readonly runner = createRunner();
 
-  readonly files = signal<InputFile[]>([]);
-  readonly dropActive = signal(false);
+  readonly files = signal<ImageItem[]>([]);
+  private nextKey = 1;
+
+  /** Images dragged in from the OS — the dropzone has always promised this. */
+  readonly dropActive = useFileDrop({
+    accept: IMAGE_FILE,
+    onDrop: (paths) => void this.runner.attempt(() => this.ingest(paths)),
+    enabled: () => this.runner.stage() === 'idle',
+  });
 
   /** Number of grid columns currently visible. Kept in sync with the responsive
    *  Tailwind breakpoints so Ctrl/Cmd + up/down move a full row. */
@@ -56,14 +73,16 @@ export class ImagesComponent {
   }
 
   async addFiles(): Promise<void> {
-    const paths = await this.pdf.pickImages(true);
-    await this.ingest(paths);
+    await this.runner.attempt(async () => this.ingest(await this.pdf.pickImages(true)));
   }
 
   private async ingest(paths: string[]): Promise<void> {
     if (!paths.length) return;
     const inspected = await this.pdf.inspect(paths);
-    this.files.update((cur) => [...cur, ...inspected.filter((f) => f.kind === 'image')]);
+    const added = inspected
+      .filter((f) => f.kind === 'image')
+      .map((f) => ({ ...f, key: this.nextKey++ }));
+    this.files.update((cur) => [...cur, ...added]);
   }
 
   remove(i: number): void {

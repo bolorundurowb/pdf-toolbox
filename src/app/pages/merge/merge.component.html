@@ -38,7 +38,7 @@
                     <p class="font-medium text-on-surface truncate">{{ f.name }}</p>
                     <p class="text-label-md font-mono-sm" [class.text-on-surface-variant]="!f.error" [class.text-error]="f.error">{{ f.error || fileMeta(f) }}</p>
                   </div>
-                  <button (click)="remove(i)" class="p-2 text-on-surface-variant hover:text-error hover:bg-error/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button (click)="remove(i)" [attr.aria-label]="'Remove ' + f.name" title="Remove" class="p-2 text-on-surface-variant hover:text-error hover:bg-error/5 rounded-lg opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">
                     <span class="material-symbols-outlined">delete</span>
                   </button>
                 </div>
@@ -101,5 +101,6 @@
   <app-process-status [stage]="runner.stage() === 'processing' ? 'processing' : runner.stage() === 'done' ? 'done' : 'error'"
     [progress]="runner.progress()" [message]="runner.message()" [result]="runner.result()" [error]="runner.error()"
     doneTitle="PDFs merged" icon="call_merge"
-    (reset)="reset()" (openFolder)="openResultFolder()" (openFile)="pdf.openPath($event)" />
+    (reset)="reset()" (back)="runner.back()" (openFolder)="openResultFolder()" (openFile)="pdf.openPath($event)" />
 }
+<app-drop-overlay [active]="dropActive()" label="Drop PDFs to add them" />

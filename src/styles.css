@@ -223,7 +223,14 @@
     bottom: -2px;
 }
 
-[appReorderItem]:focus-visible {
+/* While a pointer-driven reorder is in progress. */
+body.reordering,
+body.reordering * {
+    cursor: grabbing !important;
+    user-select: none !important;
+}
+
+[data-reorder-item]:focus-visible {
     outline: 2px solid rgb(var(--primary));
     outline-offset: 2px;
     border-radius: 0.5rem;

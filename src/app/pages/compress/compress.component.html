@@ -13,20 +13,49 @@
           <h3 class="text-headline-md">Compression Level</h3>
         </div>
         <div class="px-2">
-          <input type="range" min="1" max="3" step="1" [value]="levelIndex()" (input)="levelIndex.set(+$any($event.target).value)"
+          <input type="range" min="1" [max]="levels.length" step="1" [value]="levelIndex()" (input)="levelIndex.set(+$any($event.target).value)"
+                 aria-label="Compression level" [attr.aria-valuetext]="levelInfo().name"
                  class="w-full accent-primary h-2 bg-outline-variant rounded-lg appearance-none cursor-pointer" />
-          <div class="flex justify-between mt-4">
-            @for (l of levelLabels; track l.i) {
-              <div class="text-center">
-                <p class="font-label-md" [class.text-primary]="levelIndex()===l.i" [class.font-bold]="levelIndex()===l.i" [class.text-on-surface-variant]="levelIndex()!==l.i">{{ l.name }}</p>
-                <p class="text-[10px] text-outline">{{ l.hint }}</p>
-              </div>
+          <div class="grid mt-3" [style.grid-template-columns]="'repeat(' + levels.length + ', minmax(0, 1fr))'">
+            @for (l of levels; track l.id; let i = $index) {
+              <button type="button" (click)="levelIndex.set(i + 1)" class="text-center px-0.5 rounded hover:bg-surface-container transition-colors"
+                      [class.text-left]="i === 0" [class.text-right]="i === levels.length - 1">
+                <p class="text-label-md leading-tight" [class.text-primary]="levelIndex() === i + 1" [class.font-bold]="levelIndex() === i + 1"
+                   [class.text-on-surface-variant]="levelIndex() !== i + 1">{{ l.name }}</p>
+                <p class="text-[10px] text-outline leading-tight">{{ l.hint }}</p>
+              </button>
             }
           </div>
         </div>
-        <div class="bg-surface-container rounded-lg p-5 mt-8 flex items-start gap-3">
-          <span class="material-symbols-outlined text-primary">info</span>
-          <p class="text-body-md text-on-surface-variant">{{ levelHint() }} Actual savings are shown after processing.</p>
+
+        <!-- Live estimate -->
+        <div class="bg-surface-container rounded-lg p-5 mt-6 space-y-3">
+          <div class="flex items-start gap-3">
+            <span class="material-symbols-outlined text-primary">info</span>
+            <p class="text-body-md text-on-surface-variant">{{ levelInfo().detail }}</p>
+          </div>
+          @if (okFiles().length > 0) {
+            <div class="border-t border-outline-variant pt-3" aria-live="polite">
+              <p class="text-label-md uppercase tracking-wider text-on-surface-variant">Estimated result</p>
+              @if (estimatedTotal() !== null) {
+                <p class="text-headline-md mt-1">
+                  <span class="font-mono-sm">{{ fmtBytes(total()) }}</span>
+                  <span class="material-symbols-outlined icon-sm align-middle text-on-surface-variant mx-1">arrow_forward</span>
+                  <span class="font-mono-sm text-primary">~{{ fmtBytes(estimatedTotal()!) }}</span>
+                  @if (estimatedSaving()! > 0) {
+                    <span class="ml-2 text-label-md font-bold text-primary bg-primary-fixed px-2 py-0.5 rounded-full align-middle">about {{ estimatedSaving() }}% smaller</span>
+                  } @else {
+                    <span class="ml-2 text-label-md text-on-surface-variant align-middle">little or no saving expected</span>
+                  }
+                </p>
+                <p class="text-[11px] text-outline mt-1">A rough guide from sampling each file's largest images — the real result may differ.</p>
+              } @else if (estimating()) {
+                <p class="text-body-md text-on-surface-variant mt-1 animate-pulse">Estimating…</p>
+              } @else {
+                <p class="text-body-md text-on-surface-variant mt-1">No estimate available.</p>
+              }
+            </div>
+          }
         </div>
         <div class="mt-6 space-y-3">
           <label class="flex items-center gap-3 cursor-pointer">
@@ -44,15 +73,20 @@
       <div class="lg:col-span-6 bg-surface border border-outline-variant rounded-xl p-6 flex flex-col">
         <div class="flex items-center justify-between mb-6">
           <h3 class="text-headline-md">Files to Compress ({{ files().length }})</h3>
-          <button (click)="addFiles()" class="text-primary hover:bg-primary/5 px-4 py-2 rounded-lg font-label-md transition-colors flex items-center gap-2">
-            <span class="material-symbols-outlined">add</span> Add
-          </button>
+          <div class="flex items-center gap-1">
+            @if (files().length > 0) {
+              <button (click)="clearAll()" class="text-on-surface-variant hover:bg-surface-container px-3 py-2 rounded-lg font-label-md transition-colors">Clear all</button>
+            }
+            <button (click)="addFiles()" class="text-primary hover:bg-primary/5 px-4 py-2 rounded-lg font-label-md transition-colors flex items-center gap-2">
+              <span class="material-symbols-outlined">add</span> Add
+            </button>
+          </div>
         </div>
         @if (files().length === 0) {
           <div (click)="addFiles()" class="flex-1 border-2 border-dashed border-outline-variant rounded-xl flex flex-col items-center justify-center p-10 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors min-h-[165px]">
             <span class="material-symbols-outlined text-primary icon-3xl">note_add</span>
             <p class="text-headline-md mt-3">Add PDFs to compress</p>
-            <p class="text-on-surface-variant text-body-md">or click to browse</p>
+            <p class="text-on-surface-variant text-body-md">Drop them here, or click to browse</p>
           </div>
         } @else {
           <div class="border border-outline-variant rounded-lg overflow-hidden">
@@ -61,6 +95,7 @@
                 <tr>
                   <th class="px-4 py-3 font-label-md text-on-surface-variant">File Name</th>
                   <th class="px-4 py-3 font-label-md text-on-surface-variant">Size</th>
+                  <th class="px-4 py-3 font-label-md text-on-surface-variant">Estimate</th>
                   <th class="px-4 py-3 font-label-md text-on-surface-variant text-right">Action</th>
                 </tr>
               </thead>
@@ -70,11 +105,23 @@
                     <td class="px-4 py-3">
                       <div class="flex items-center gap-3">
                         <div class="w-8 h-10 bg-error/10 text-error flex items-center justify-center rounded border border-error/20"><span class="material-symbols-outlined icon-sm">picture_as_pdf</span></div>
-                        <span class="text-body-md font-medium truncate max-w-[165px]">{{ f.name }}</span>
+                        <span class="text-body-md font-medium truncate max-w-[130px]">{{ f.name }}</span>
                       </div>
                     </td>
                     <td class="px-4 py-3 font-mono-sm" [class.text-error]="f.error">{{ f.error || fmtBytes(f.size) }}</td>
-                    <td class="px-4 py-3 text-right"><button (click)="remove(i)" class="text-outline hover:text-error transition-colors p-1"><span class="material-symbols-outlined">delete</span></button></td>
+                    <td class="px-4 py-3 font-mono-sm text-on-surface-variant whitespace-nowrap">
+                      @if (f.error) {
+                        —
+                      } @else if (estimateFor(f); as e) {
+                        ~{{ fmtBytes(e.estimated) }}
+                        @if (savingFor(f)! > 0) { <span class="text-primary font-bold">-{{ savingFor(f) }}%</span> }
+                      } @else if (estimating()) {
+                        <span class="animate-pulse">…</span>
+                      } @else {
+                        —
+                      }
+                    </td>
+                    <td class="px-4 py-3 text-right"><button (click)="remove(i)" [attr.aria-label]="'Remove ' + f.name" title="Remove" class="text-outline hover:text-error transition-colors p-1"><span class="material-symbols-outlined">delete</span></button></td>
                   </tr>
                 }
               </tbody>
@@ -99,5 +146,6 @@
   <app-process-status [stage]="runner.stage() === 'processing' ? 'processing' : runner.stage() === 'done' ? 'done' : 'error'"
     [progress]="runner.progress()" [message]="runner.message()" [result]="runner.result()" [error]="runner.error()"
     doneTitle="PDFs compressed" icon="compress"
-    (reset)="reset()" (openFolder)="openResultFolder()" (openFile)="pdf.openPath($event)" />
+    (reset)="reset()" (back)="runner.back()" (openFolder)="openResultFolder()" (openFile)="pdf.openPath($event)" />
 }
+<app-drop-overlay [active]="dropActive()" label="Drop PDFs to compress them" />

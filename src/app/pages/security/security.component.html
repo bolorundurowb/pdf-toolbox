@@ -22,22 +22,36 @@
         <div class="space-y-6 animate-fade-in">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
             <div class="space-y-2">
-              <label class="font-label-md text-on-surface-variant block">User Password</label>
+              <label for="sec-user" class="font-label-md text-on-surface-variant block">Password to open</label>
               <div class="relative">
-                <input [type]="showUser() ? 'text' : 'password'" [value]="userPassword()" (input)="userPassword.set($any($event.target).value)"
-                       placeholder="••••••••" class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
-                <span (click)="showUser.set(!showUser())" class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline cursor-pointer hover:text-on-surface">{{ showUser() ? 'visibility_off' : 'visibility' }}</span>
+                <input id="sec-user" [type]="showUser() ? 'text' : 'password'" [value]="userPassword()" (input)="userPassword.set($any($event.target).value)"
+                       autocomplete="new-password" placeholder="••••••••" class="w-full bg-surface border border-outline-variant rounded-lg pl-4 pr-11 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+                <button type="button" (click)="showUser.set(!showUser())" [attr.aria-label]="showUser() ? 'Hide passwords' : 'Show passwords'" [attr.aria-pressed]="showUser()"
+                        class="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-outline hover:text-on-surface">
+                  <span class="material-symbols-outlined">{{ showUser() ? 'visibility_off' : 'visibility' }}</span>
+                </button>
               </div>
             </div>
             <div class="space-y-2">
-              <label class="font-label-md text-on-surface-variant block">Owner Password (optional)</label>
-              <input type="password" [value]="ownerPassword()" (input)="ownerPassword.set($any($event.target).value)"
-                     placeholder="••••••••" class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+              <label for="sec-confirm" class="font-label-md text-on-surface-variant block">Confirm password</label>
+              <input id="sec-confirm" [type]="showUser() ? 'text' : 'password'" [value]="confirmPassword()" (input)="confirmPassword.set($any($event.target).value)"
+                     autocomplete="new-password" placeholder="••••••••" [attr.aria-invalid]="passwordMismatch()" aria-describedby="sec-confirm-msg"
+                     class="w-full bg-surface border rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                     [class.border-error]="passwordMismatch()" [class.border-outline-variant]="!passwordMismatch()" />
+              <p id="sec-confirm-msg" class="text-label-md min-h-[1rem]" [class.text-error]="passwordMismatch()">
+                @if (passwordMismatch()) { Passwords don't match. }
+              </p>
+            </div>
+            <div class="space-y-2 md:col-span-2">
+              <label for="sec-owner" class="font-label-md text-on-surface-variant block">Permissions password (optional)</label>
+              <input id="sec-owner" type="password" [value]="ownerPassword()" (input)="ownerPassword.set($any($event.target).value)"
+                     autocomplete="new-password" placeholder="Leave blank to generate a random one" class="w-full md:w-1/2 bg-surface border border-outline-variant rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+              <p class="text-label-md text-on-surface-variant">Lets someone change the file's print/copy permissions. If left blank, a random one is used so the restrictions can't be lifted.</p>
             </div>
           </div>
           <div class="space-y-2">
-            <label class="font-label-md text-on-surface-variant block">Encryption Strength</label>
-            <select [value]="strength()" (change)="strength.set($any($event.target).value)"
+            <label for="sec-strength" class="font-label-md text-on-surface-variant block">Encryption Strength</label>
+            <select id="sec-strength" [value]="strength()" (change)="strength.set($any($event.target).value)"
                     class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all cursor-pointer">
               @for (s of strengths; track s.id) { <option [value]="s.id">{{ s.label }}</option> }
             </select>
@@ -50,8 +64,8 @@
       } @else {
         <div class="space-y-6 animate-fade-in">
           <div class="space-y-2 max-w-sm">
-            <label class="font-label-md text-on-surface-variant block">Current Password</label>
-            <input type="password" [value]="unlockPassword()" (input)="unlockPassword.set($any($event.target).value)"
+            <label for="sec-unlock" class="font-label-md text-on-surface-variant block">Current Password</label>
+            <input id="sec-unlock" type="password" [value]="unlockPassword()" (input)="unlockPassword.set($any($event.target).value)"
                    placeholder="Password to unlock" class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
           </div>
           <div class="flex items-center gap-3 px-4 py-3 bg-error-container/30 border border-error/20 rounded-lg">
@@ -72,7 +86,7 @@
         <div (click)="addFiles()" class="border-2 border-dashed border-outline-variant rounded-xl p-10 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
           <span class="material-symbols-outlined text-outline icon-2xl">{{ mode()==='add' ? 'lock' : 'lock_open' }}</span>
           <p class="text-headline-md mt-2">{{ mode()==='add' ? 'Add PDFs to protect' : 'Add locked PDFs to unlock' }}</p>
-          <p class="text-on-surface-variant text-body-md">or click to browse</p>
+          <p class="text-on-surface-variant text-body-md">Drop them here, or click to browse</p>
         </div>
       } @else {
         <div class="border border-outline-variant rounded-lg divide-y divide-outline-variant">
@@ -80,8 +94,12 @@
             <div class="px-4 py-3 flex items-center gap-3 hover:bg-surface-container transition-colors">
               <div class="w-8 h-10 bg-error/10 text-error flex items-center justify-center rounded border border-error/20"><span class="material-symbols-outlined icon-sm">picture_as_pdf</span></div>
               <span class="flex-1 text-body-md font-medium truncate">{{ f.name }}</span>
-              <span class="font-mono-sm text-on-surface-variant text-label-md">{{ fmtBytes(f.size) }}</span>
-              <button (click)="remove(i)" class="text-outline hover:text-error transition-colors p-1"><span class="material-symbols-outlined">delete</span></button>
+              @if (noteFor(f); as note) {
+                <span class="text-label-md text-error">{{ note }}</span>
+              } @else {
+                <span class="font-mono-sm text-on-surface-variant text-label-md">{{ fmtBytes(f.size) }}</span>
+              }
+              <button (click)="remove(i)" [attr.aria-label]="'Remove ' + f.name" title="Remove" class="text-outline hover:text-error transition-colors p-1"><span class="material-symbols-outlined">delete</span></button>
             </div>
           }
         </div>
@@ -102,5 +120,6 @@
   <app-process-status [stage]="runner.stage() === 'processing' ? 'processing' : runner.stage() === 'done' ? 'done' : 'error'"
     [progress]="runner.progress()" [message]="runner.message()" [result]="runner.result()" [error]="runner.error()"
     [doneTitle]="mode()==='add' ? 'PDFs protected' : 'Passwords removed'" icon="security"
-    (reset)="reset()" (openFolder)="openResultFolder()" (openFile)="pdf.openPath($event)" />
+    (reset)="reset()" (back)="runner.back()" (openFolder)="openResultFolder()" (openFile)="pdf.openPath($event)" />
 }
+<app-drop-overlay [active]="dropActive()" label="Drop PDFs to add them" />

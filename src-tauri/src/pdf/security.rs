@@ -11,7 +11,7 @@ use rand::RngExt;
 use tauri::ipc::Channel;
 
 use super::model::{OperationResult, OutputFile, Progress, SecurityOptions};
-use super::util::{check_files_limits, file_size, report, stem, unique_path};
+use super::util::{check_files_limits, ensure_file_id, file_size, report, stem, unique_path};
 
 fn default_permissions() -> Permissions {
     Permissions::PRINTABLE
@@ -97,11 +97,16 @@ pub fn encrypt_pdfs(
     }
     check_files_limits(&paths)?;
 
-    let owner = options
-        .owner_password
-        .as_deref()
-        .filter(|s| !s.is_empty())
-        .unwrap_or(&options.user_password);
+    // Reusing the user password as the owner password would let anyone who can
+    // open the file also lift its restrictions, so default to a random one.
+    let owner: String = match options.owner_password.as_deref().filter(|s| !s.is_empty()) {
+        Some(p) => p.to_string(),
+        None => {
+            let mut bytes = [0u8; 24];
+            rand::rng().fill(&mut bytes);
+            bytes.iter().map(|b| format!("{b:02x}")).collect()
+        }
+    };
 
     let total = paths.len() as u32;
     let mut files = Vec::new();
@@ -116,7 +121,8 @@ pub fn encrypt_pdfs(
             return Err(format!("{name} is already password-protected."));
         }
 
-        let state = build_encryption_state(&doc, &options.strength, &options.user_password, owner)?;
+        ensure_file_id(&mut doc);
+        let state = build_encryption_state(&doc, &options.strength, &options.user_password, &owner)?;
         doc.encrypt(&state).map_err(|e| format!("Couldn't protect {name}: {e}"))?;
         doc.save(&out_path).map_err(|e| format!("Couldn't save {name}: {e}"))?;
 
