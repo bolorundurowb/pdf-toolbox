@@ -22,17 +22,23 @@
       @if (files().length > 0) {
         <div class="flex-1">
           <div class="flex items-center justify-between mb-4">
-            <h4 class="font-label-md uppercase tracking-wider text-on-surface-variant">{{ heading() }}</h4>
+            <div>
+              <h4 class="font-label-md uppercase tracking-wider text-on-surface-variant">{{ heading() }}</h4>
+              <p class="text-label-md text-on-surface-variant">Drag to reorder — or focus an image and press Ctrl/Cmd + arrow keys</p>
+            </div>
             <button (click)="clearAll()" class="text-primary font-label-md hover:underline">Clear all</button>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             @for (f of files(); track f.path; let i = $index) {
-              <div draggable="true" (dragstart)="onDragStart(i)" (dragover)="onDragOver($event)" (drop)="onDrop(i)"
+              <div [appReorderItem]="i" appReorderAxis="grid" [appReorderColumns]="columns()"
+                   [appReorderTotal]="files().length" (appReorder)="onReorder($event)" tabindex="0"
+                   [attr.aria-label]="f.name"
                    class="group bg-surface-container-lowest border rounded-lg p-3 flex flex-col gap-3 hover:shadow-sm transition-all cursor-grab active:cursor-grabbing"
                    [class.border-outline-variant]="!f.error" [class.border-error]="f.error">
                 <div class="aspect-video bg-surface-container-low rounded-md overflow-hidden relative flex items-center justify-center">
                   @if (!f.error) {
-                    <img class="w-full h-full object-cover" [src]="thumb(f.path)" [alt]="f.name" />
+                    <img class="w-full h-full object-cover pointer-events-none" draggable="false"
+                         [src]="thumb(f.path)" [alt]="f.name" />
                   } @else {
                     <span class="material-symbols-outlined text-error icon-xl">broken_image</span>
                   }

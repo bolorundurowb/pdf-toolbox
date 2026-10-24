@@ -1,14 +1,15 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, HostListener, computed, signal } from '@angular/core';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { PdfService } from '../../core/pdf.service';
 import { createRunner } from '../../core/runner';
 import { ImageOrientation, ImagePageSize, InputFile } from '../../core/models';
 import { formatBytes, pluralize } from '../../core/format';
 import { ProcessStatusComponent } from '../../shared/process-status.component';
+import { ReorderEvent, ReorderItemDirective, applyReorder } from '../../shared/reorder.directive';
 
 @Component({
   selector: 'app-images',
-  imports: [ProcessStatusComponent],
+  imports: [ProcessStatusComponent, ReorderItemDirective],
   templateUrl: './images.component.html',
 })
 export class ImagesComponent {
@@ -17,6 +18,10 @@ export class ImagesComponent {
 
   readonly files = signal<InputFile[]>([]);
   readonly dropActive = signal(false);
+
+  /** Number of grid columns currently visible. Kept in sync with the responsive
+   *  Tailwind breakpoints so Ctrl/Cmd + up/down move a full row. */
+  readonly columns = signal(3);
 
   // Options
   readonly pageSize = signal<ImagePageSize>('a4');
@@ -42,9 +47,9 @@ export class ImagesComponent {
   readonly heading = computed(() => `Uploaded Images (${this.files().length})`);
   readonly canRun = computed(() => this.okFiles().length > 0);
 
-  private dragFrom: number | null = null;
-
-  constructor(public readonly pdf: PdfService) {}
+  constructor(public readonly pdf: PdfService) {
+    this.syncColumns();
+  }
 
   thumb(path: string): string {
     return convertFileSrc(path);
@@ -69,16 +74,14 @@ export class ImagesComponent {
     this.files.set([]);
   }
 
-  onDragStart(i: number) { this.dragFrom = i; }
-  onDragOver(e: DragEvent) { e.preventDefault(); }
-  onDrop(to: number) {
-    const from = this.dragFrom;
-    this.dragFrom = null;
-    if (from === null || from === to) return;
-    const arr = [...this.files()];
-    const [m] = arr.splice(from, 1);
-    arr.splice(to, 0, m);
-    this.files.set(arr);
+  onReorder(event: ReorderEvent): void {
+    this.files.update((cur) => applyReorder(cur, event));
+  }
+
+  @HostListener('window:resize')
+  private syncColumns(): void {
+    const w = window.innerWidth;
+    this.columns.set(w >= 1024 ? 3 : w >= 640 ? 2 : 1);
   }
 
   metaOf(f: InputFile): string {
