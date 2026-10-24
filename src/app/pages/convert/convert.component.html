@@ -9,7 +9,7 @@
       <div (click)="choose()" class="border-2 border-dashed border-outline-variant rounded-xl p-12 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
         <span class="material-symbols-outlined text-primary icon-3xl">description</span>
         <p class="text-headline-md mt-3">Choose a PDF</p>
-        <p class="text-on-surface-variant text-body-md">or click to browse your files</p>
+        <p class="text-on-surface-variant text-body-md">Drop a PDF here, or click to browse your files</p>
       </div>
     } @else {
       <div class="bg-surface border border-outline-variant rounded-xl flex-1 flex flex-col overflow-hidden">
@@ -47,5 +47,6 @@
   <app-process-status [stage]="runner.stage() === 'processing' ? 'processing' : runner.stage() === 'done' ? 'done' : 'error'"
     [progress]="runner.progress()" [message]="runner.message()" [result]="runner.result()" [error]="runner.error()"
     doneTitle="Word document ready" icon="description"
-    (reset)="reset()" (openFolder)="openResultFolder()" (openFile)="pdf.openPath($event)" />
+    (reset)="reset()" (back)="runner.back()" (openFolder)="openResultFolder()" (openFile)="pdf.openPath($event)" />
 }
+<app-drop-overlay [active]="dropActive()" label="Drop a PDF to open it" />

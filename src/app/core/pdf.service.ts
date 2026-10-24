@@ -3,14 +3,17 @@ import {Channel, invoke} from '@tauri-apps/api/core';
 import {open} from '@tauri-apps/plugin-dialog';
 import {documentDir, join} from '@tauri-apps/api/path';
 import {mkdir, exists, writeFile, writeTextFile} from '@tauri-apps/plugin-fs';
-import {openPath, revealItemInDir} from '@tauri-apps/plugin-opener';
+import {openPath, openUrl, revealItemInDir} from '@tauri-apps/plugin-opener';
 import {
-    CompressOptions, ImagesOptions, InputFile, MergeOptions, OperationResult,
+    CompressEstimate, CompressOptions, ImagesOptions, InputFile, MergeOptions, OperationResult,
     OutputFile, PdfMetadata, ProgressPayload, RecentFile, SecurityOptions, SplitOptions,
     PageOp, UpdateInfo,
 } from './models';
 
-const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'heic', 'heif'];
+// Must match src-tauri/src/pdf/inspect.rs IMAGE_EXTS. HEIC/HEIF are left out on
+// purpose: the backend can't decode them, so offering them only led to files
+// that silently disappeared from the list.
+const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp'];
 
 @Injectable({providedIn: 'root'})
 export class PdfService {
@@ -51,6 +54,11 @@ export class PdfService {
 
     compressPdfs(paths: string[], options: CompressOptions, outDir: string, onProgress: (p: ProgressPayload) => void) {
         return invoke<OperationResult>('compress_pdfs', {paths, options, outDir, onProgress: this.channel(onProgress)});
+    }
+
+    estimateCompression(paths: string[], options: CompressOptions): Promise<CompressEstimate[]> {
+        if (paths.length === 0) return Promise.resolve([]);
+        return invoke<CompressEstimate[]>('estimate_compression', {paths, options});
     }
 
     encryptPdfs(paths: string[], options: SecurityOptions, outDir: string, onProgress: (p: ProgressPayload) => void) {
@@ -132,6 +140,11 @@ export class PdfService {
 
     async openPath(path: string): Promise<void> {
         await openPath(path);
+    }
+
+    /** Opens a web link in the default browser (openPath is for local files). */
+    async openUrl(url: string): Promise<void> {
+        await openUrl(url);
     }
 
     private toArray(sel: string | string[] | null): string[] {

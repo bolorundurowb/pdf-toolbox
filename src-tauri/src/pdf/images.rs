@@ -3,13 +3,13 @@
 
 use std::path::Path;
 
-use image::DynamicImage;
+use image::{DynamicImage, ImageDecoder, ImageReader, RgbImage};
 use lopdf::content::{Content, Operation};
 use lopdf::{dictionary, Dictionary, Document, Object, Stream};
 use tauri::ipc::Channel;
 
 use super::model::{ImagesOptions, OperationResult, OutputFile, Progress};
-use super::util::{check_files_limits, file_size, report, short_filename, unique_path};
+use super::util::{check_files_limits, ensure_file_id, file_size, report, short_filename, unique_path};
 
 pub fn images_to_pdf(
     paths: Vec<String>,
@@ -32,7 +32,7 @@ pub fn images_to_pdf(
         report(on_progress, Progress::new(i as u32, total, format!("Adding {}", short_filename(path))))?;
 
         let img = load_image(path)?;
-        let rgb = img.to_rgb8();
+        let rgb = flatten_onto_white(&img);
         let (w, h) = rgb.dimensions();
 
         let mut jpeg = Vec::new();
@@ -116,6 +116,7 @@ pub fn images_to_pdf(
     });
     doc.trailer.set("Root", Object::Reference(catalog_id));
     doc.compress();
+    ensure_file_id(&mut doc);
 
     let out_path = unique_path(Path::new(&out_dir), "Images.pdf");
     doc.save(&out_path)
@@ -137,10 +138,40 @@ pub fn images_to_pdf(
     })
 }
 
+/// Decodes an image upright: phone photos are usually stored sideways with an
+/// EXIF orientation tag, which `image::open` ignores — they came out rotated.
 fn load_image(path: &str) -> Result<DynamicImage, String> {
-    let p = Path::new(path);
-    image::open(p).map_err(|e| format!("Couldn't read {}: {e}", short_filename(path)))
+    let err = |e: &dyn std::fmt::Display| format!("Couldn't read {}: {e}", short_filename(path));
+    let mut decoder = ImageReader::open(Path::new(path))
+        .and_then(|r| r.with_guessed_format())
+        .map_err(|e| err(&e))?
+        .into_decoder()
+        .map_err(|e| err(&e))?;
+    let orientation = decoder.orientation().ok();
+    let mut img = DynamicImage::from_decoder(decoder).map_err(|e| err(&e))?;
+    if let Some(o) = orientation {
+        img.apply_orientation(o);
+    }
+    Ok(img)
 }
+
+/// JPEG has no alpha channel. Dropping it outright turned transparent areas of
+/// PNGs black, so composite onto white (what a page looks like) instead.
+fn flatten_onto_white(img: &DynamicImage) -> RgbImage {
+    if !img.color().has_alpha() {
+        return img.to_rgb8();
+    }
+    let rgba = img.to_rgba8();
+    RgbImage::from_fn(rgba.width(), rgba.height(), |x, y| {
+        let [r, g, b, a] = rgba.get_pixel(x, y).0;
+        let a = a as u16;
+        let blend = |c: u8| ((c as u16 * a + 255 * (255 - a) + 127) / 255) as u8;
+        image::Rgb([blend(r), blend(g), blend(b)])
+    })
+}
+
+/// Longest side of a "fit to image" page, in points (about 1.27 m).
+const FIT_MAX_PT: f64 = 3600.0;
 
 /// Returns `(page_w, page_h, draw_x, draw_y, draw_w, draw_h)` in PDF points.
 fn layout(
@@ -152,7 +183,13 @@ fn layout(
 ) -> (f64, f64, f64, f64, f64, f64) {
     let (mut page_w, mut page_h) = match page_size {
         "letter" => (612.0, 792.0),
-        "fit" => (px_w as f64 + 2.0 * margin_pt, px_h as f64 + 2.0 * margin_pt),
+        "fit" => {
+            // Treat pixels as 96 dpi (0.75 pt each) and cap the longer side well
+            // under the 14,400 pt limit many readers enforce, so large photos
+            // don't produce enormous or invalid pages.
+            let scale = 0.75_f64.min(FIT_MAX_PT / px_w.max(px_h).max(1) as f64);
+            (px_w as f64 * scale + 2.0 * margin_pt, px_h as f64 * scale + 2.0 * margin_pt)
+        }
         _ => (595.276, 841.89), // A4
     };
 

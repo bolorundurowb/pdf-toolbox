@@ -65,12 +65,32 @@ fn inspect_pdf(path_str: &str) -> FileInfo {
 
 fn inspect_image(path_str: &str, _ext: &str) -> FileInfo {
     let mut info = base(path_str, "image");
-    match image::image_dimensions(Path::new(path_str)) {
-        Ok((w, h)) => {
+    match upright_dimensions(path_str) {
+        Some((w, h)) => {
             info.width = Some(w);
             info.height = Some(h);
         }
-        Err(_) => info.error = Some("Unsupported or unreadable image".to_string()),
+        None => info.error = Some("Unsupported or unreadable image".to_string()),
     }
     info
+}
+
+/// Pixel size as the image will appear once its EXIF orientation is applied,
+/// so a portrait phone photo isn't reported (and laid out) as landscape.
+fn upright_dimensions(path_str: &str) -> Option<(u32, u32)> {
+    use image::metadata::Orientation;
+    use image::ImageDecoder;
+
+    let mut decoder = image::ImageReader::open(Path::new(path_str))
+        .ok()?
+        .with_guessed_format()
+        .ok()?
+        .into_decoder()
+        .ok()?;
+    let (w, h) = decoder.dimensions();
+    let quarter_turn = matches!(
+        decoder.orientation().ok(),
+        Some(Orientation::Rotate90 | Orientation::Rotate270 | Orientation::Rotate90FlipH | Orientation::Rotate270FlipH)
+    );
+    Some(if quarter_turn { (h, w) } else { (w, h) })
 }

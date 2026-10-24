@@ -43,7 +43,12 @@ export class AppComponent implements OnInit, OnDestroy {
 
   openReleases(): void {
     const url = this.updateInfo()?.releaseUrl;
-    if (url) void this.pdf.openPath(url);
+    if (url) void this.pdf.openUrl(url).catch(() => undefined);
+  }
+
+  /** Release tags already carry a leading `v` (`v1.2.0`); strip it so the UI doesn't show `vv1.2.0`. */
+  bare(version: string | undefined): string {
+    return (version ?? '').replace(/^v/i, '');
   }
 
   ngOnDestroy(): void {

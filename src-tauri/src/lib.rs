@@ -6,7 +6,7 @@ use tauri::ipc::Channel;
 use tauri::Manager;
 
 use pdf::model::{
-    CompressOptions, FileInfo, ImagesOptions, MergeOptions, OperationResult, PageOp, PdfMetadata,
+    CompressEstimate, CompressOptions, FileInfo, ImagesOptions, MergeOptions, OperationResult, PageOp, PdfMetadata,
     Progress, RecentFile, SecurityOptions, SplitOptions,
 };
 use pdf::update::UpdateInfo;
@@ -64,6 +64,13 @@ async fn compress_pdfs(
     tauri::async_runtime::spawn_blocking(move || pdf::compress::compress_pdfs(paths, options, out_dir, &on_progress))
         .await
         .map_err(|e| format!("Task failed: {e}"))?
+}
+
+#[tauri::command]
+async fn estimate_compression(paths: Vec<String>, options: CompressOptions) -> Result<Vec<CompressEstimate>, String> {
+    tauri::async_runtime::spawn_blocking(move || pdf::compress::estimate_compression(paths, options))
+        .await
+        .map_err(|e| format!("Task failed: {e}"))
 }
 
 #[tauri::command]
@@ -153,6 +160,7 @@ pub fn run() {
             merge_pdfs,
             split_pdf,
             compress_pdfs,
+            estimate_compression,
             encrypt_pdfs,
             decrypt_pdfs,
             get_metadata,

@@ -1,11 +1,11 @@
-import { Component, OnDestroy, computed, signal } from '@angular/core';
-import { getCurrentWebview } from '@tauri-apps/api/webview';
-import type { UnlistenFn } from '@tauri-apps/api/event';
+import { Component, computed, signal } from '@angular/core';
 import { PdfService } from '../../core/pdf.service';
 import { createRunner } from '../../core/runner';
 import { InputFile } from '../../core/models';
 import { formatBytes, pluralize } from '../../core/format';
 import { ProcessStatusComponent } from '../../shared/process-status.component';
+import { DropOverlayComponent } from '../../shared/drop-overlay.component';
+import { PDF_FILE, useFileDrop } from '../../core/file-drop';
 import { ReorderEvent, ReorderItemDirective, applyReorder } from '../../shared/reorder.directive';
 
 /**
@@ -24,52 +24,34 @@ interface MergeItem extends InputFile {
  */
 @Component({
   selector: 'app-merge',
-  imports: [ProcessStatusComponent, ReorderItemDirective],
+  imports: [ProcessStatusComponent, ReorderItemDirective, DropOverlayComponent],
   templateUrl: './merge.component.html',
 })
-export class MergeComponent implements OnDestroy {
+export class MergeComponent {
   readonly fmtBytes = formatBytes;
   readonly runner = createRunner();
 
   readonly files = signal<MergeItem[]>([]);
   readonly optimize = signal(false);
   readonly outputName = signal('');
-  readonly dropActive = signal(false);
-
-  private unlistenDrop?: UnlistenFn;
   private nextKey = 1;
+
+  /** Accepts PDFs dragged in from the OS, which the dropzone always promised. */
+  readonly dropActive = useFileDrop({
+    accept: PDF_FILE,
+    onDrop: (paths) => void this.runner.attempt(() => this.ingest(paths)),
+    enabled: () => this.runner.stage() === 'idle',
+  });
 
   readonly okFiles = computed(() => this.files().filter((f) => !f.error));
   readonly totalSize = computed(() => this.okFiles().reduce((a, f) => a + f.size, 0));
   readonly totalPages = computed(() => this.okFiles().reduce((a, f) => a + (f.pages ?? 0), 0));
   readonly canRun = computed(() => this.okFiles().length >= 2);
 
-  constructor(public readonly pdf: PdfService) {
-    void this.listenForFileDrops();
-  }
-
-  /** Accepts PDFs dragged in from the OS, which the dropzone always promised. */
-  private async listenForFileDrops(): Promise<void> {
-    try {
-      this.unlistenDrop = await getCurrentWebview().onDragDropEvent((event) => {
-        const payload = event.payload;
-        if (payload.type === 'enter' || payload.type === 'over') {
-          this.dropActive.set(true);
-        } else if (payload.type === 'leave') {
-          this.dropActive.set(false);
-        } else {
-          this.dropActive.set(false);
-          void this.ingest(payload.paths.filter((p) => /\.pdf$/i.test(p)));
-        }
-      });
-    } catch {
-      // Outside the Tauri shell (e.g. `ng serve` in a browser) there is no
-      // native drag-and-drop; the click-to-browse path still works.
-    }
-  }
+  constructor(public readonly pdf: PdfService) {}
 
   async addFiles(): Promise<void> {
-    await this.ingest(await this.pdf.pickPdfs(true));
+    await this.runner.attempt(async () => this.ingest(await this.pdf.pickPdfs(true)));
   }
 
   private async ingest(paths: string[]): Promise<void> {
@@ -114,9 +96,5 @@ export class MergeComponent implements OnDestroy {
   openResultFolder(): void {
     const r = this.runner.result();
     if (r) void this.pdf.openFolder(r.outDir);
-  }
-
-  ngOnDestroy(): void {
-    this.unlistenDrop?.();
   }
 }

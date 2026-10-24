@@ -8,7 +8,10 @@ use lopdf::{Document, Object, ObjectId};
 use tauri::ipc::Channel;
 
 use super::model::{MergeOptions, OperationResult, OutputFile, Progress};
-use super::util::{check_files_limits, file_size, report, short_filename, unique_path};
+use super::util::{
+    check_files_limits, ensure_file_id, ensure_unlocked, file_size, flatten_inherited_attributes, report, short_filename,
+    unique_path,
+};
 
 fn type_of(object: &Object) -> Option<String> {
     object
@@ -40,6 +43,10 @@ pub fn merge_pdfs(
     for (i, path) in paths.iter().enumerate() {
         let mut doc = Document::load(path)
             .map_err(|e| format!("Couldn't read {}: {e}", short_filename(path)))?;
+        ensure_unlocked(&doc, &short_filename(path))?;
+        // Each document's pages are about to share one /Pages node, so anything
+        // they inherited from their own tree must move onto the page itself.
+        flatten_inherited_attributes(&mut doc);
         doc.renumber_objects_with(max_id);
         max_id = doc.max_id + 1;
 
@@ -133,6 +140,7 @@ pub fn merge_pdfs(
     merged.max_id = merged.objects.len() as u32;
     merged.renumber_objects();
     merged.compress();
+    ensure_file_id(&mut merged);
 
     let base = options
         .output_name

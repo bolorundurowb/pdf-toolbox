@@ -7,7 +7,7 @@ use lopdf::{Dictionary, Document, Object};
 use tauri::ipc::Channel;
 
 use super::model::{OperationResult, OutputFile, PageOp, Progress};
-use super::util::{check_file_limits, file_size, report, stem, unique_path};
+use super::util::{check_file_limits, ensure_unlocked, file_size, flatten_inherited_attributes, report, stem, unique_path};
 
 pub fn organize_pdf(
     path: String,
@@ -22,6 +22,10 @@ pub fn organize_pdf(
     report(on_progress, Progress::new(0, 1, "Reorganizing…"))?;
 
     let mut doc = Document::load(&path).map_err(|e| format!("Couldn't read this PDF: {e}"))?;
+    ensure_unlocked(&doc, "This PDF")?;
+    // Pages are re-parented directly under the root /Pages node and the
+    // intermediate nodes pruned, so inherited size/resources must move first.
+    flatten_inherited_attributes(&mut doc);
     let page_map = doc.get_pages(); // 1-based → object id
 
     let root_id = doc

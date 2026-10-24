@@ -7,6 +7,8 @@ import { formatBytes } from '../../core/format';
 import { buildDocx, DocxBlock } from '../../core/docx';
 import { pageToParagraphs } from '../../core/pdf-text';
 import { ProcessStatusComponent } from '../../shared/process-status.component';
+import { DropOverlayComponent } from '../../shared/drop-overlay.component';
+import { PDF_FILE, useFileDrop } from '../../core/file-drop';
 
 /**
  * Converts a PDF to an editable Word document (.docx). Text is read locally
@@ -16,7 +18,7 @@ import { ProcessStatusComponent } from '../../shared/process-status.component';
  */
 @Component({
   selector: 'app-convert',
-  imports: [ProcessStatusComponent],
+  imports: [ProcessStatusComponent, DropOverlayComponent],
   templateUrl: './convert.component.html',
 })
 export class ConvertComponent implements OnDestroy {
@@ -24,6 +26,13 @@ export class ConvertComponent implements OnDestroy {
   readonly runner = createRunner();
 
   readonly file = signal<InputFile | null>(null);
+
+  /** A PDF dragged in from the OS opens it — only while no file is loaded, so a stray drop can't discard work. */
+  readonly dropActive = useFileDrop({
+    accept: PDF_FILE,
+    onDrop: ([path]) => void this.runner.attempt(() => this.load(path)),
+    enabled: () => this.runner.stage() === 'idle' && !this.file(),
+  });
 
   readonly canRun = computed(() => !!this.file() && !this.file()!.error);
 
@@ -33,9 +42,14 @@ export class ConvertComponent implements OnDestroy {
   ) {}
 
   async choose(): Promise<void> {
-    const paths = await this.pdf.pickPdfs(false);
-    if (!paths.length) return;
-    const [f] = await this.pdf.inspect(paths);
+    await this.runner.attempt(async () => {
+      const [path] = await this.pdf.pickPdfs(false);
+      if (path) await this.load(path);
+    });
+  }
+
+  private async load(path: string): Promise<void> {
+    const [f] = await this.pdf.inspect([path]);
     if (!f) return;
     if (f.error) {
       this.runner.fail(f.error);
@@ -64,6 +78,7 @@ export class ConvertComponent implements OnDestroy {
 
     const blocks: DocxBlock[] = [];
     const skipped: number[] = [];
+    let textParagraphs = 0;
 
     for (let page = 1; page <= total; page++) {
       op({ processed: page - 1, total, message: `Reading page ${page}` });
@@ -72,6 +87,7 @@ export class ConvertComponent implements OnDestroy {
         const items = await this.renderer.pageTextItems(f.path, page);
         for (const paragraph of pageToParagraphs(items)) {
           blocks.push({ type: 'paragraph', text: paragraph });
+          if (paragraph.trim()) textParagraphs++;
         }
       } catch {
         // One unreadable page shouldn't cost the user the whole conversion.
@@ -86,7 +102,10 @@ export class ConvertComponent implements OnDestroy {
     const bytes = buildDocx(blocks, this.baseName(f));
     const written = await this.pdf.writeOutput(outDir, `${this.baseName(f)}.docx`, bytes);
 
-    return { files: [{ ...written, badge: skippedBadge(skipped) }], outDir };
+    // Scanned, image-only PDFs have no text layer; say so rather than hand back
+    // a silently empty document.
+    const noText = textParagraphs === 0;
+    return { files: [{ ...written, badge: noText ? 'No text found (scanned?)' : skippedBadge(skipped) }], outDir };
   }
 
   private baseName(f: InputFile): string {

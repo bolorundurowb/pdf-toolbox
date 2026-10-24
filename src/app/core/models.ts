@@ -72,12 +72,19 @@ export interface SplitOptions {
   outputName?: string;
 }
 
-export type CompressLevel = 'low' | 'balanced' | 'high';
+export type CompressLevel = 'minimal' | 'light' | 'balanced' | 'strong' | 'extreme';
 
 export interface CompressOptions {
   level: CompressLevel;
   grayscale: boolean;
   removeMetadata: boolean;
+}
+
+/** Approximate compressed size of one file, from a quick sample of its images. */
+export interface CompressEstimate {
+  path: string;
+  original: number;
+  estimated: number;
 }
 
 export type EncryptionStrength = 'aes256' | 'aes128' | 'rc4';

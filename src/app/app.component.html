@@ -38,7 +38,7 @@
     @if (updateInfo()?.updateAvailable) {
       <div class="mx-4 mb-3 px-4 py-3 bg-primary/10 border border-primary/20 rounded-2xl">
         <p class="text-[11px] font-semibold text-primary leading-tight">
-          v{{ updateInfo()?.latestVersion }} available
+          v{{ bare(updateInfo()?.latestVersion) }} available
         </p>
         <p class="text-[10px] text-text-muted mt-0.5">
           You're on v{{ updateInfo()?.currentVersion }}

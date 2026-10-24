@@ -26,6 +26,7 @@ export class DashboardComponent implements OnInit {
   readonly actions: QuickAction[] = [
     { label: 'Image to PDF', hint: 'JPG, PNG, TIFF', icon: 'image', route: '/images' },
     { label: 'Merge', hint: 'Combine PDFs', icon: 'call_merge', route: '/merge' },
+    { label: 'Organise', hint: 'Reorder, rotate, delete pages', icon: 'reorder', route: '/organize' },
     { label: 'Extract', hint: 'Pages, text, images', icon: 'article', route: '/extract' },
     { label: 'Convert', hint: 'PDF to Word (.docx)', icon: 'transform', route: '/convert' },
     { label: 'Compress', hint: 'Optimise size', icon: 'compress', route: '/compress' },

@@ -40,6 +40,26 @@ export function createRunner() {
     stage.set('error');
   }
 
+  /**
+   * Runs a non-processing step (picking or inspecting files) and shows the error
+   * panel if it throws, instead of failing silently with an unhandled rejection.
+   */
+  async function attempt(task: () => Promise<void>) {
+    try {
+      await task();
+    } catch (e) {
+      fail(describe(e));
+    }
+  }
+
+  /** Leaves the error panel but keeps everything the user had entered. */
+  function back() {
+    stage.set('idle');
+    progress.set(0);
+    message.set('');
+    error.set(null);
+  }
+
   function reset() {
     stage.set('idle');
     progress.set(0);
@@ -48,10 +68,10 @@ export function createRunner() {
     error.set(null);
   }
 
-  return { stage, progress, message, result, error, run, fail, reset };
+  return { stage, progress, message, result, error, run, fail, attempt, back, reset };
 }
 
-function describe(e: unknown): string {
+export function describe(e: unknown): string {
   if (typeof e === 'string') return e;
   if (e instanceof Error) return e.message;
   return 'Something went wrong. Please try again.';

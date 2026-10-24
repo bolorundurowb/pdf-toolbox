@@ -5,12 +5,14 @@ import { createRunner } from '../../core/runner';
 import { InputFile } from '../../core/models';
 import { formatBytes } from '../../core/format';
 import { ProcessStatusComponent } from '../../shared/process-status.component';
+import { DropOverlayComponent } from '../../shared/drop-overlay.component';
+import { PDF_FILE, useFileDrop } from '../../core/file-drop';
 import { PageGridComponent, PageTile } from '../../shared/page-grid.component';
 import { ReorderEvent, applyReorder } from '../../shared/reorder.directive';
 
 @Component({
   selector: 'app-organize',
-  imports: [ProcessStatusComponent, PageGridComponent],
+  imports: [ProcessStatusComponent, PageGridComponent, DropOverlayComponent],
   templateUrl: './organize.component.html',
 })
 export class OrganizeComponent implements OnDestroy {
@@ -19,6 +21,13 @@ export class OrganizeComponent implements OnDestroy {
 
   readonly file = signal<InputFile | null>(null);
   readonly tiles = signal<PageTile[]>([]);
+
+  /** A PDF dragged in from the OS opens it — only while no file is loaded, so a stray drop can't discard work. */
+  readonly dropActive = useFileDrop({
+    accept: PDF_FILE,
+    onDrop: ([path]) => void this.runner.attempt(() => this.load(path)),
+    enabled: () => this.runner.stage() === 'idle' && !this.file(),
+  });
 
   /** Monotonic, so a duplicated page still gets a unique `@for` track key. */
   private nextKey = 1;
@@ -40,9 +49,14 @@ export class OrganizeComponent implements OnDestroy {
   ) {}
 
   async choose(): Promise<void> {
-    const paths = await this.pdf.pickPdfs(false);
-    if (!paths.length) return;
-    const [f] = await this.pdf.inspect(paths);
+    await this.runner.attempt(async () => {
+      const [path] = await this.pdf.pickPdfs(false);
+      if (path) await this.load(path);
+    });
+  }
+
+  private async load(path: string): Promise<void> {
+    const [f] = await this.pdf.inspect([path]);
     if (!f) return;
     if (f.error) {
       this.runner.fail(f.error);
