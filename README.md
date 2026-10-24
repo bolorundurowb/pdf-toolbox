@@ -18,7 +18,7 @@ computer — no uploads, no cloud, no account.
 | **Organise**     | Reorder, rotate, duplicate, or delete pages and save a new PDF                           |
 | **Compress**     | Shrink PDFs (Low / Recommended / Extreme), optional grayscale and strip metadata         |
 | **Extract**      | Pick pages, then save them as text, PNG/JPG images, or a new PDF — or split by file size |
-| **Convert**      | Convert a PDF into an editable Word document (.docx)                                   |
+| **Convert**      | Convert a PDF into an editable Word document (.docx)                                     |
 | **Security**     | Add a password (AES-256, AES-128, or RC4) or remove one you already know                 |
 | **Metadata**     | View and edit Title, Author, Subject, Keywords, and Creator                              |
 
