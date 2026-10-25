@@ -58,6 +58,15 @@
     }
 }
 
+@layer components {
+    /* Primary call to action on each tool page */
+    .btn-action {
+        @apply bg-secondary text-on-secondary rounded-xl font-bold py-2.5 px-4 flex items-center justify-center gap-2
+            shadow-lg shadow-secondary/20 hover:opacity-90 active:scale-95 transition-all
+            disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:active:scale-100;
+    }
+}
+
 /* Material Symbols glyph helper */
 .material-symbols-outlined {
     font-family: 'Material Symbols Outlined';

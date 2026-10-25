@@ -1,6 +1,9 @@
 name: Release
 
 on:
+  push:
+    tags:
+      - 'v*.*.*'
   workflow_dispatch:
     inputs:
       draft:
@@ -27,16 +30,56 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Read version from package.json
-        id: meta
+      # A tag push is the trigger for a release, so by the time it's pushed
+      # every version-bearing file must already match it. This job never
+      # edits or commits anything; it only verifies and fails loudly if the
+      # tag was pushed before the version bump, or the bump missed a file.
+      - name: Verify tag version matches project files
+        if: github.event_name == 'push'
         run: |
-          VERSION=$(jq -r .version package.json)
-          if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
-            echo "Could not read version from package.json" >&2
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+
+          PKG_VERSION=$(jq -r .version package.json)
+          LOCK_VERSION=$(jq -r .version package-lock.json)
+          TAURI_VERSION=$(jq -r .version src-tauri/tauri.conf.json)
+          CARGO_VERSION=$(grep -m1 '^version = "' src-tauri/Cargo.toml | sed -E 's/^version = "(.*)"$/\1/')
+          # Cargo.lock has one [[package]] block per dependency; find the one
+          # for this crate itself and read the version line right after it.
+          CARGO_LOCK_VERSION=$(awk '/^name = "pdf-toolbox"$/ { getline; print; exit }' src-tauri/Cargo.lock | sed -E 's/^version = "(.*)"$/\1/')
+
+          echo "Tag version:       ${TAG_VERSION}"
+          echo "package.json:      ${PKG_VERSION}"
+          echo "package-lock.json: ${LOCK_VERSION}"
+          echo "tauri.conf.json:   ${TAURI_VERSION}"
+          echo "Cargo.toml:        ${CARGO_VERSION}"
+          echo "Cargo.lock:        ${CARGO_LOCK_VERSION}"
+
+          MISMATCHES=()
+          [ "$PKG_VERSION" = "$TAG_VERSION" ]        || MISMATCHES+=("package.json (${PKG_VERSION})")
+          [ "$LOCK_VERSION" = "$TAG_VERSION" ]       || MISMATCHES+=("package-lock.json (${LOCK_VERSION})")
+          [ "$TAURI_VERSION" = "$TAG_VERSION" ]      || MISMATCHES+=("src-tauri/tauri.conf.json (${TAURI_VERSION})")
+          [ "$CARGO_VERSION" = "$TAG_VERSION" ]      || MISMATCHES+=("src-tauri/Cargo.toml (${CARGO_VERSION})")
+          [ "$CARGO_LOCK_VERSION" = "$TAG_VERSION" ] || MISMATCHES+=("src-tauri/Cargo.lock (${CARGO_LOCK_VERSION})")
+
+          if [ "${#MISMATCHES[@]}" -gt 0 ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} declares version ${TAG_VERSION}, but these files disagree: ${MISMATCHES[*]}. Bump the version in every file, commit, and push a new tag."
             exit 1
           fi
 
-          TAG="v${VERSION}"
+      - name: Resolve release metadata
+        id: meta
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            TAG="${GITHUB_REF_NAME}"
+          else
+            VERSION=$(jq -r .version package.json)
+            if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
+              echo "Could not read version from package.json" >&2
+              exit 1
+            fi
+            TAG="v${VERSION}"
+          fi
 
           # Pre-release if the version contains an alpha, beta, or dev identifier
           # (e.g. 1.0.0-alpha.1, 0.3.0-beta, 0.2.0-dev).
@@ -130,6 +173,8 @@ jobs:
 
             **Version:** ${{ needs.prepare.outputs.version }}
             **Platforms:** Windows (x64), Linux (x64), macOS (Intel + Apple Silicon)
-          releaseDraft: ${{ inputs.draft }}
+          # Always draft first so every platform's assets land on the release
+          # before anyone (or any tooling) treats it as published.
+          releaseDraft: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || true }}
           prerelease: ${{ needs.prepare.outputs.prerelease == 'true' }}
           args: ${{ matrix.args }}

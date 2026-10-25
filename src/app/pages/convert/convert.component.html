@@ -35,7 +35,7 @@
         <div class="px-6 py-4 bg-surface-container-low border-t border-outline-variant flex justify-between items-center">
           <span class="text-label-md text-on-surface-variant">{{ file()!.pages }} pages · saved as .docx</span>
           <button (click)="run()" [disabled]="!canRun()"
-                  class="bg-primary text-on-primary px-8 py-3 rounded-lg font-label-md flex items-center gap-2 shadow-sm hover:brightness-110 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                  class="btn-action">
             <span class="material-symbols-outlined icon-sm">description</span>
             Convert to Word
           </button>

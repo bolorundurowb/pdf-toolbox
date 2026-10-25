@@ -110,8 +110,8 @@
           <p class="text-body-md font-bold">{{ summary() }}</p>
         </div>
         <button (click)="apply()" [disabled]="!canRun()"
-                class="bg-primary text-on-primary px-10 py-3.5 rounded-lg text-headline-md flex items-center gap-3 shadow-lg shadow-primary/20 hover:brightness-110 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none">
-          <span class="material-symbols-outlined">{{ mode()==='add' ? 'lock' : 'lock_open' }}</span> {{ mode()==='add' ? 'Protect' : 'Unlock' }}
+                class="btn-action">
+          <span class="material-symbols-outlined icon-sm">{{ mode()==='add' ? 'lock' : 'lock_open' }}</span> {{ mode()==='add' ? 'Protect' : 'Unlock' }}
         </button>
       </div>
     </div>

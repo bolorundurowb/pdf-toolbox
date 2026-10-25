@@ -120,8 +120,8 @@
       </div>
       <div class="p-6 bg-surface-container border-t border-outline-variant">
         <button (click)="convert()" [disabled]="!canRun()"
-                class="w-full bg-primary text-on-primary py-4 rounded-xl text-headline-md shadow-lg shadow-primary/20 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none">
-          <span class="material-symbols-outlined fill icon-md">picture_as_pdf</span> Convert to PDF
+                class="btn-action w-full">
+          <span class="material-symbols-outlined icon-sm">picture_as_pdf</span> Convert to PDF
         </button>
         <p class="text-center text-label-md text-on-surface-variant mt-4">{{ summaryText() }}</p>
       </div>
