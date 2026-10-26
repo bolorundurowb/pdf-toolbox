@@ -1,11 +1,20 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { PdfService } from '../../core/pdf.service';
 import { createRunner } from '../../core/runner';
 import { InputFile } from '../../core/models';
 import { formatBytes, pluralize } from '../../core/format';
+import { SettingsService } from '../../core/settings.service';
+import { RecentInputsService } from '../../core/recent-inputs.service';
 import { ProcessStatusComponent } from '../../shared/process-status.component';
 import { DropOverlayComponent } from '../../shared/drop-overlay.component';
+import { ToolPageComponent } from '../../shared/tool-page.component';
+import { FileDropZoneComponent } from '../../shared/file-drop-zone.component';
+import { PageThumbComponent } from '../../shared/page-thumb.component';
 import { PDF_FILE, useFileDrop } from '../../core/file-drop';
+import { useShortcuts } from '../../core/shortcuts';
+import { mergeSuggestion, outputBase } from '../../core/output-names';
+import { routerPaths } from '../../core/tool-nav';
+import { parseRanges, rangesToPages } from '../../core/page-ranges';
 import { ReorderEvent, ReorderItemDirective, applyReorder } from '../../shared/reorder.directive';
 
 /**
@@ -14,6 +23,8 @@ import { ReorderEvent, ReorderItemDirective, applyReorder } from '../../shared/r
  */
 interface MergeItem extends InputFile {
   key: number;
+  /** Optional page range for this input; empty means every page. */
+  range: string;
 }
 
 /**
@@ -24,12 +35,15 @@ interface MergeItem extends InputFile {
  */
 @Component({
   selector: 'app-merge',
-  imports: [ProcessStatusComponent, ReorderItemDirective, DropOverlayComponent],
+  imports: [
+    ProcessStatusComponent, ReorderItemDirective, DropOverlayComponent,
+    ToolPageComponent, FileDropZoneComponent, PageThumbComponent,
+  ],
   templateUrl: './merge.component.html',
 })
-export class MergeComponent {
+export class MergeComponent implements OnInit {
   readonly fmtBytes = formatBytes;
-  readonly runner = createRunner();
+  readonly runner = createRunner(() => void this.pdf.cancelJob());
 
   readonly files = signal<MergeItem[]>([]);
   readonly optimize = signal(false);
@@ -39,19 +53,40 @@ export class MergeComponent {
   /** Accepts PDFs dragged in from the OS, which the dropzone always promised. */
   readonly dropActive = useFileDrop({
     accept: PDF_FILE,
-    onDrop: (paths) => void this.runner.attempt(() => this.ingest(paths)),
+    onDrop: (paths) => void this.ingestFrom(paths),
     enabled: () => this.runner.stage() === 'idle',
   });
 
   readonly okFiles = computed(() => this.files().filter((f) => !f.error));
   readonly totalSize = computed(() => this.okFiles().reduce((a, f) => a + f.size, 0));
-  readonly totalPages = computed(() => this.okFiles().reduce((a, f) => a + (f.pages ?? 0), 0));
+  readonly totalPages = computed(() => this.okFiles().reduce((a, f) => a + this.pagesFor(f).length, 0));
   readonly canRun = computed(() => this.okFiles().length >= 2);
+  readonly suggestedName = computed(() => mergeSuggestion(this.okFiles()));
 
-  constructor(public readonly pdf: PdfService) {}
+  constructor(
+    public readonly pdf: PdfService,
+    private readonly settings: SettingsService,
+    private readonly recents: RecentInputsService,
+  ) {
+    useShortcuts({
+      onOpen: () => void this.addFiles(),
+      onRun: () => void this.process(),
+      enabled: () => this.runner.stage() === 'idle',
+      canRun: () => this.canRun(),
+    });
+  }
+
+  async ngOnInit(): Promise<void> {
+    const paths = routerPaths().filter((path) => PDF_FILE.test(path));
+    if (paths.length > 0) await this.ingestFrom(paths);
+  }
 
   async addFiles(): Promise<void> {
     await this.runner.attempt(async () => this.ingest(await this.pdf.pickPdfs(true)));
+  }
+
+  private async ingestFrom(paths: string[]): Promise<void> {
+    await this.runner.attempt(() => this.ingest(paths));
   }
 
   private async ingest(paths: string[]): Promise<void> {
@@ -59,8 +94,9 @@ export class MergeComponent {
     const inspected = await this.pdf.inspect(paths);
     const added = inspected
       .filter((f) => f.kind === 'pdf')
-      .map((f) => ({ ...f, key: this.nextKey++ }));
+      .map((f) => ({ ...f, key: this.nextKey++, range: '' }));
     this.files.update((cur) => [...cur, ...added]);
+    this.recents.remember(added);
   }
 
   remove(i: number): void {
@@ -68,6 +104,7 @@ export class MergeComponent {
   }
 
   clearAll(): void {
+    if (this.files().length > 0 && !window.confirm('Remove all files from this list?')) return;
     this.files.set([]);
   }
 
@@ -75,26 +112,55 @@ export class MergeComponent {
     this.files.update((cur) => applyReorder(cur, event));
   }
 
-  fileMeta(f: InputFile): string {
-    return `${f.pages != null ? pluralize(f.pages, 'page') : '— pages'} • ${formatBytes(f.size)}`;
+  setRange(i: number, value: string): void {
+    this.files.update((cur) => cur.map((f, x) => (x === i ? { ...f, range: value } : f)));
+  }
+
+  /** Page numbers this row will contribute, honouring its range text. */
+  pagesFor(f: MergeItem): number[] {
+    const count = f.pages ?? 0;
+    const text = f.range.trim();
+    if (!text) return Array.from({ length: count }, (_, i) => i + 1);
+    return rangesToPages(parseRanges(text, count));
+  }
+
+  fileMeta(f: MergeItem): string {
+    const chosen = this.pagesFor(f).length;
+    const pages = f.pages != null ? pluralize(f.pages, 'page') : '— pages';
+    const selection = f.range.trim() ? `${chosen} selected · ` : '';
+    return `${selection}${pages} • ${formatBytes(f.size)}`;
   }
 
   async process(): Promise<void> {
     if (!this.canRun()) return;
-    const outDir = await this.pdf.defaultOutputDir();
+    const outDir = await this.settings.resolveOutputDir();
+    if (!outDir) return;
+    const base = outputBase(this.outputName(), this.suggestedName());
+    const conflict = await this.settings.resolveConflict(outDir, [`${base}.pdf`]);
     const paths = this.okFiles().map((f) => f.path);
     await this.runner.run((op) =>
-      this.pdf.mergePdfs(paths, { optimize: this.optimize(), outputName: this.outputName() || undefined }, outDir, op),
+      this.pdf.mergePdfs(
+        paths,
+        {
+          optimize: this.optimize(),
+          outputName: this.outputName() || undefined,
+          pageRanges: this.okFiles().map((f) => f.range.trim()),
+          onConflict: conflict,
+        },
+        outDir, op,
+      ),
     );
   }
 
   reset(): void {
     this.runner.reset();
     this.files.set([]);
+    this.outputName.set('');
+    this.optimize.set(false);
   }
 
   openResultFolder(): void {
     const r = this.runner.result();
-    if (r) void this.pdf.openFolder(r.outDir);
+    if (r?.outDir) void this.pdf.openFolder(r.outDir);
   }
 }

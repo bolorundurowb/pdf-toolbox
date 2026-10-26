@@ -1,12 +1,19 @@
-import { Component, HostListener, computed, signal } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { PdfService } from '../../core/pdf.service';
 import { createRunner } from '../../core/runner';
 import { ImageOrientation, ImagePageSize, InputFile } from '../../core/models';
 import { formatBytes, pluralize } from '../../core/format';
+import { SettingsService } from '../../core/settings.service';
+import { RecentInputsService } from '../../core/recent-inputs.service';
 import { ProcessStatusComponent } from '../../shared/process-status.component';
 import { DropOverlayComponent } from '../../shared/drop-overlay.component';
+import { ToolPageComponent } from '../../shared/tool-page.component';
+import { FileDropZoneComponent } from '../../shared/file-drop-zone.component';
 import { IMAGE_FILE, useFileDrop } from '../../core/file-drop';
+import { useShortcuts } from '../../core/shortcuts';
+import { imagesSuggestion, outputBase } from '../../core/output-names';
+import { routerPaths } from '../../core/tool-nav';
 import { ReorderEvent, ReorderItemDirective, applyReorder } from '../../shared/reorder.directive';
 
 /**
@@ -19,12 +26,15 @@ interface ImageItem extends InputFile {
 
 @Component({
   selector: 'app-images',
-  imports: [ProcessStatusComponent, ReorderItemDirective, DropOverlayComponent],
+  imports: [
+    ProcessStatusComponent, ReorderItemDirective, DropOverlayComponent,
+    ToolPageComponent, FileDropZoneComponent,
+  ],
   templateUrl: './images.component.html',
 })
-export class ImagesComponent {
+export class ImagesComponent implements OnInit {
   readonly fmtBytes = formatBytes;
-  readonly runner = createRunner();
+  readonly runner = createRunner(() => void this.pdf.cancelJob());
 
   readonly files = signal<ImageItem[]>([]);
   private nextKey = 1;
@@ -32,12 +42,12 @@ export class ImagesComponent {
   /** Images dragged in from the OS — the dropzone has always promised this. */
   readonly dropActive = useFileDrop({
     accept: IMAGE_FILE,
-    onDrop: (paths) => void this.runner.attempt(() => this.ingest(paths)),
+    onDrop: (paths) => void this.ingestFrom(paths),
     enabled: () => this.runner.stage() === 'idle',
   });
 
-  /** Number of grid columns currently visible. Kept in sync with the responsive
-   *  Tailwind breakpoints so Ctrl/Cmd + up/down move a full row. */
+  /** Number of grid columns currently visible. Kept close to the container layout
+   *  so Ctrl/Cmd + up/down move a full row. */
   readonly columns = signal(3);
 
   // Options
@@ -45,6 +55,7 @@ export class ImagesComponent {
   readonly orientation = signal<ImageOrientation>('auto');
   readonly margin = signal(20); // px→pt approximate
   readonly quality = signal(85);
+  readonly outputName = signal('');
 
   readonly pageSizes: { id: ImagePageSize; label: string; hint: string }[] = [
     { id: 'a4', label: 'A4', hint: '210 × 297 mm' },
@@ -61,11 +72,27 @@ export class ImagesComponent {
 
   readonly okFiles = computed(() => this.files().filter((f) => !f.error));
   readonly totalSize = computed(() => this.okFiles().reduce((a, f) => a + f.size, 0));
-  readonly heading = computed(() => `Uploaded Images (${this.files().length})`);
+  readonly heading = computed(() => `Uploaded images (${this.files().length})`);
   readonly canRun = computed(() => this.okFiles().length > 0);
+  readonly suggestedName = computed(() => imagesSuggestion(this.okFiles()));
 
-  constructor(public readonly pdf: PdfService) {
+  constructor(
+    public readonly pdf: PdfService,
+    private readonly settings: SettingsService,
+    private readonly recents: RecentInputsService,
+  ) {
     this.syncColumns();
+    useShortcuts({
+      onOpen: () => void this.addFiles(),
+      onRun: () => void this.convert(),
+      enabled: () => this.runner.stage() === 'idle',
+      canRun: () => this.canRun(),
+    });
+  }
+
+  async ngOnInit(): Promise<void> {
+    const paths = routerPaths().filter((path) => IMAGE_FILE.test(path));
+    if (paths.length > 0) await this.ingestFrom(paths);
   }
 
   thumb(path: string): string {
@@ -76,6 +103,10 @@ export class ImagesComponent {
     await this.runner.attempt(async () => this.ingest(await this.pdf.pickImages(true)));
   }
 
+  private async ingestFrom(paths: string[]): Promise<void> {
+    await this.runner.attempt(() => this.ingest(paths));
+  }
+
   private async ingest(paths: string[]): Promise<void> {
     if (!paths.length) return;
     const inspected = await this.pdf.inspect(paths);
@@ -83,6 +114,8 @@ export class ImagesComponent {
       .filter((f) => f.kind === 'image')
       .map((f) => ({ ...f, key: this.nextKey++ }));
     this.files.update((cur) => [...cur, ...added]);
+    this.recents.remember(added);
+    this.syncColumns();
   }
 
   remove(i: number): void {
@@ -90,6 +123,7 @@ export class ImagesComponent {
   }
 
   clearAll(): void {
+    if (this.files().length > 0 && !window.confirm('Remove all images from this list?')) return;
     this.files.set([]);
   }
 
@@ -97,10 +131,9 @@ export class ImagesComponent {
     this.files.update((cur) => applyReorder(cur, event));
   }
 
-  @HostListener('window:resize')
   private syncColumns(): void {
     const w = window.innerWidth;
-    this.columns.set(w >= 1024 ? 3 : w >= 640 ? 2 : 1);
+    this.columns.set(w >= 1180 ? 3 : w >= 900 ? 2 : 1);
   }
 
   metaOf(f: InputFile): string {
@@ -113,12 +146,22 @@ export class ImagesComponent {
 
   async convert(): Promise<void> {
     if (!this.canRun()) return;
-    const outDir = await this.pdf.defaultOutputDir();
+    const outDir = await this.settings.resolveOutputDir();
+    if (!outDir) return;
+    const base = outputBase(this.outputName(), this.suggestedName());
+    const conflict = await this.settings.resolveConflict(outDir, [`${base}.pdf`]);
     const paths = this.okFiles().map((f) => f.path);
     await this.runner.run((op) =>
       this.pdf.imagesToPdf(
         paths,
-        { pageSize: this.pageSize(), orientation: this.orientation(), margin: this.margin(), quality: this.quality() },
+        {
+          pageSize: this.pageSize(),
+          orientation: this.orientation(),
+          margin: this.margin(),
+          quality: this.quality(),
+          outputName: this.outputName() || undefined,
+          onConflict: conflict,
+        },
         outDir, op,
       ),
     );
@@ -127,10 +170,11 @@ export class ImagesComponent {
   reset(): void {
     this.runner.reset();
     this.files.set([]);
+    this.outputName.set('');
   }
 
   openResultFolder(): void {
     const r = this.runner.result();
-    if (r) void this.pdf.openFolder(r.outDir);
+    if (r?.outDir) void this.pdf.openFolder(r.outDir);
   }
 }

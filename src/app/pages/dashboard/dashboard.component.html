@@ -1,81 +1,160 @@
-<div class="px-container-margin py-8 space-y-gutter-grid">
-  <!-- Quick actions -->
-  <section>
-    <div class="flex items-center justify-between mb-6">
-      <h2 class="text-headline-lg text-text-main">Quick Actions</h2>
-      <span class="text-label-caps text-text-muted uppercase tracking-widest bg-surface-container-low px-3 py-1 rounded-full">Local &amp; Offline</span>
+<div class="flex flex-col gap-6 p-6 h-full overflow-y-auto custom-scrollbar">
+  <header class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-headline-lg text-text-main">Dashboard</h1>
+      <p class="text-body-md text-text-muted mt-1">Everything runs on this computer.</p>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      @for (a of actions; track a.route) {
-        <a
-          [routerLink]="a.route"
-          class="bg-surface-container-lowest border border-surface-container-low p-6 rounded-3xl shadow-soft hover:shadow-lg hover:border-primary/10 transition-all cursor-pointer group active:scale-[0.98]"
-        >
-          <div class="flex justify-between items-start mb-4">
-            <div class="w-12 h-12 text-primary bg-primary/5 rounded-full flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
-              <span class="material-symbols-outlined">{{ a.icon }}</span>
-            </div>
-            <span class="material-symbols-outlined text-surface-dim group-hover:text-primary transition-colors">arrow_forward</span>
+    <span class="text-label-md text-text-muted uppercase tracking-widest bg-surface-container-low px-3 py-1 rounded-full">Local &amp; offline</span>
+  </header>
+
+  <!-- Lead with the drop zone -->
+  <app-file-drop-zone
+    title="Drop a PDF or images to choose what to do"
+    hint="PDFs, JPG, PNG, TIFF, WebP, HEIC or HEIF"
+    icon="upload_file"
+    [active]="dropActive()"
+    (choose)="askForChoose()"
+  />
+
+  <!-- Tool chooser for dropped, launched, or recent files -->
+  @if (pending().length > 0) {
+    <section class="bg-surface-container-low border border-outline-variant rounded-xl p-5 space-y-4" aria-live="polite">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <h2 class="text-headline-md text-on-surface">Open in a tool</h2>
+          <p class="text-body-md text-on-surface-variant">{{ pendingNames() }}</p>
+        </div>
+        <button (click)="dismissChoice()" class="px-3 py-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container text-body-md">Cancel</button>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        @if (hasImages()) {
+          <button (click)="choose(imageChoice.route)"
+                  class="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-outline-variant bg-surface hover:border-primary transition-colors text-body-md">
+            <span aria-hidden="true" class="material-symbols-outlined icon-sm text-primary">{{ imageChoice.icon }}</span>
+            <span>{{ imageChoice.label }}</span>
+          </button>
+        }
+        @if (hasPdfs()) {
+          @for (tool of pdfTools; track tool.route) {
+            <button (click)="choose(tool.route)" [title]="tool.hint"
+                    class="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-outline-variant bg-surface hover:border-primary transition-colors text-body-md">
+              <span aria-hidden="true" class="material-symbols-outlined icon-sm text-primary">{{ tool.icon }}</span>
+              <span>{{ tool.label }}</span>
+            </button>
+          }
+        }
+      </div>
+    </section>
+  }
+
+  <div class="grid grid-cols-1 @[900px]:grid-cols-2 gap-6">
+    <!-- Recent files -->
+    <section class="min-w-0">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-headline-md text-text-main">Recent files</h2>
+        @if (recents.items().length > 0) {
+          <button (click)="recents.clear()" class="text-label-md text-text-muted hover:text-primary">Clear</button>
+        }
+      </div>
+      <div class="bg-surface-container-lowest border border-surface-container-low rounded-2xl overflow-hidden shadow-soft">
+        @if (recents.items().length === 0) {
+          <div class="px-6 py-8 text-center">
+            <span aria-hidden="true" class="material-symbols-outlined text-outline-variant icon-2xl">history</span>
+            <p class="text-text-muted text-body-md mt-2">Files you open will appear here.</p>
           </div>
-          <h4 class="text-title-sm text-text-main mb-1">{{ a.label }}</h4>
-          <p class="text-body-sm text-text-muted">{{ a.hint }}</p>
+        } @else {
+          <ul class="divide-y divide-surface-container-low">
+            @for (f of recents.items(); track f.path) {
+              <li class="flex items-center gap-3 px-4 py-3">
+                <div class="file-icon w-9 h-9 shrink-0">
+                  <span aria-hidden="true" class="material-symbols-outlined icon-sm">{{ isImage(f) ? 'image' : 'description' }}</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-body-md font-medium text-text-main truncate" [title]="f.name">{{ f.name }}</p>
+                  <p class="text-label-md text-text-muted">{{ fmtBytes(f.size) }} · {{ fmtDate(f.opened) }}</p>
+                </div>
+                <button (click)="open(f)" title="Open" [attr.aria-label]="'Open ' + f.name" class="w-8 h-8 grid place-items-center text-primary hover:bg-primary/10 rounded-lg">
+                  <span aria-hidden="true" class="material-symbols-outlined icon-sm">visibility</span>
+                </button>
+                <button (click)="reveal(f)" title="Show in folder" [attr.aria-label]="'Show ' + f.name + ' in folder'" class="w-8 h-8 grid place-items-center text-text-muted hover:bg-surface-container rounded-lg">
+                  <span aria-hidden="true" class="material-symbols-outlined icon-sm">folder_open</span>
+                </button>
+                <select (change)="chooseFor($event, f.path)" [attr.aria-label]="'Open ' + f.name + ' in a tool'"
+                        class="bg-surface border border-outline-variant rounded-lg px-2 py-1 text-label-md text-on-surface-variant">
+                  <option value="">Open in…</option>
+                  @if (isImage(f)) {
+                    <option value="/images">Image to PDF</option>
+                  } @else {
+                    @for (tool of pdfTools; track tool.route) {
+                      <option [value]="tool.route">{{ tool.label }}</option>
+                    }
+                  }
+                </select>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </section>
+
+    <!-- Recent activity from the output folder -->
+    <section class="min-w-0">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-headline-md text-text-main">Recent activity</h2>
+        <button (click)="refreshRecent()" class="text-label-md text-text-muted hover:text-primary">Refresh</button>
+      </div>
+      <div class="bg-surface-container-lowest border border-surface-container-low rounded-2xl overflow-hidden shadow-soft">
+        @if (loading()) {
+          <div class="px-6 py-8 text-center text-text-muted text-body-md">Loading…</div>
+        } @else if (recent().length === 0) {
+          <div class="px-6 py-8 text-center">
+            <span aria-hidden="true" class="material-symbols-outlined text-outline-variant icon-2xl">folder_open</span>
+            <p class="text-text-muted text-body-md mt-2">No files yet in {{ outputFolder() }}.</p>
+          </div>
+        } @else {
+          <ul class="divide-y divide-surface-container-low">
+            @for (f of recent(); track f.path) {
+              <li class="flex items-center gap-3 px-4 py-3">
+                <div class="file-icon w-9 h-9 shrink-0">
+                  <span aria-hidden="true" class="material-symbols-outlined icon-sm">description</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-body-md font-medium text-text-main truncate" [title]="f.name">{{ f.name }}</p>
+                  <p class="text-label-md text-text-muted">{{ fmtDate(f.modified) }} · {{ fmtBytes(f.size) }}</p>
+                </div>
+                <button (click)="open(f)" title="Open" [attr.aria-label]="'Open ' + f.name" class="w-8 h-8 grid place-items-center text-primary hover:bg-primary/10 rounded-lg">
+                  <span aria-hidden="true" class="material-symbols-outlined icon-sm">visibility</span>
+                </button>
+                <button (click)="reveal(f)" title="Show in folder" [attr.aria-label]="'Show ' + f.name + ' in folder'" class="w-8 h-8 grid place-items-center text-text-muted hover:bg-surface-container rounded-lg">
+                  <span aria-hidden="true" class="material-symbols-outlined icon-sm">folder_open</span>
+                </button>
+                <select (change)="chooseFor($event, f.path)" [attr.aria-label]="'Open ' + f.name + ' in a tool'"
+                        class="bg-surface border border-outline-variant rounded-lg px-2 py-1 text-label-md text-on-surface-variant">
+                  <option value="">Open in…</option>
+                  @for (tool of pdfTools; track tool.route) {
+                    <option [value]="tool.route">{{ tool.label }}</option>
+                  }
+                </select>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </section>
+  </div>
+
+  <!-- Compact tool links -->
+  <section>
+    <h2 class="text-headline-md text-text-main mb-3">Tools</h2>
+    <div class="flex flex-wrap gap-2">
+      @for (tool of tools; track tool.route) {
+        <a [routerLink]="tool.route"
+           class="flex items-center gap-2 px-4 py-2 rounded-full border border-outline-variant bg-surface-container-lowest hover:border-primary hover:text-primary transition-colors text-body-md">
+          <span aria-hidden="true" class="material-symbols-outlined icon-sm">{{ tool.icon }}</span>
+          {{ tool.label }}
         </a>
       }
     </div>
   </section>
-
-  <!-- Recent activity -->
-  <section>
-    <div class="flex items-center justify-between mb-6">
-      <h2 class="text-headline-lg text-text-main">Recent Activity</h2>
-      <span class="text-label-md text-text-muted">From your PDF Toolbox output folder</span>
-    </div>
-    <div class="bg-surface-container-lowest border border-surface-container-low rounded-3xl overflow-hidden shadow-soft">
-      @if (loading()) {
-        <div class="px-8 py-10 text-center text-text-muted text-body-md">Loading…</div>
-      } @else if (recent().length === 0) {
-        <div class="px-8 py-12 text-center">
-          <span class="material-symbols-outlined text-outline-variant icon-4xl">folder_open</span>
-          <p class="text-text-muted text-body-md mt-2">No files yet. Your processed PDFs will appear here.</p>
-        </div>
-      } @else {
-        <table class="w-full text-left">
-          <thead class="bg-surface-container-low/50">
-            <tr>
-              <th class="px-8 py-4 text-label-caps text-text-muted uppercase tracking-wider">File Name</th>
-              <th class="px-8 py-4 text-label-caps text-text-muted uppercase tracking-wider hidden md:table-cell">Date Modified</th>
-              <th class="px-8 py-4 text-label-caps text-text-muted uppercase tracking-wider hidden sm:table-cell">Size</th>
-              <th class="px-8 py-4 text-label-caps text-text-muted uppercase tracking-wider text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-surface-container-low">
-            @for (f of recent(); track f.path) {
-              <tr class="hover:bg-surface-bright transition-colors group">
-                <td class="px-8 py-5">
-                  <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 bg-primary/5 text-primary rounded-xl flex items-center justify-center shrink-0">
-                      <span class="material-symbols-outlined icon-sm">description</span>
-                    </div>
-                    <span class="text-body-md text-text-main font-medium truncate max-w-sidebar-width">{{ f.name }}</span>
-                  </div>
-                </td>
-                <td class="px-8 py-5 hidden md:table-cell text-text-muted text-body-md">{{ fmtDate(f.modified) }}</td>
-                <td class="px-8 py-5 hidden sm:table-cell text-text-muted text-body-md font-mono-sm">{{ fmtBytes(f.size) }}</td>
-                <td class="px-8 py-5 text-right">
-                  <div class="flex justify-end gap-2">
-                    <button (click)="open(f)" title="Open" class="p-2 text-primary hover:bg-primary/10 rounded-xl transition-all active:scale-90">
-                      <span class="material-symbols-outlined icon-sm">visibility</span>
-                    </button>
-                    <button (click)="reveal(f)" title="Show in folder" class="p-2 text-text-muted hover:bg-surface-container rounded-xl transition-all active:scale-90">
-                      <span class="material-symbols-outlined icon-sm">folder_open</span>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      }
-    </div>
-  </section>
 </div>
+<app-drop-overlay [active]="dropActive()" label="Drop files to choose a tool" />

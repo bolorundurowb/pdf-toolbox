@@ -1,97 +1,80 @@
 @if (runner.stage() === 'idle') {
-  <div class="flex h-full">
-    <!-- Workspace -->
-    <div class="flex-1 flex flex-col gap-container-gap p-padding-lg overflow-y-auto custom-scrollbar min-w-0">
+  <app-tool-page title="Image to PDF" description="Convert JPG, PNG, TIFF, WebP, HEIC or HEIF images into a single PDF.">
+    <app-file-drop-zone
+      title="Drag and drop images here"
+      hint="JPG, PNG, TIFF, WebP, HEIC or HEIF"
+      icon="cloud_upload"
+      [active]="dropActive()"
+      (choose)="addFiles()"
+    />
+
+    @if (files().length > 0) {
       <div>
-        <h2 class="text-headline-lg">Image to PDF</h2>
-        <p class="text-body-md text-on-surface-variant">Convert JPG, PNG, and TIFF images into a single professional PDF document.</p>
-      </div>
-
-      <!-- Dropzone -->
-      <div (click)="addFiles()" (keydown.enter)="addFiles()" role="button" tabindex="0"
-           class="border-2 border-dashed border-outline-variant bg-surface-container-lowest rounded-xl flex flex-col items-center justify-center p-12 transition-all hover:bg-surface-container-low cursor-pointer group">
-        <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-          <span class="material-symbols-outlined text-primary icon-2xl">cloud_upload</span>
-        </div>
-        <h3 class="text-headline-md mb-2">Drag and drop images here</h3>
-        <p class="text-on-surface-variant mb-6">or click to browse your files (JPG, PNG, TIFF)</p>
-        <span class="bg-primary text-on-primary px-6 py-2.5 rounded-lg font-label-md">Choose Files</span>
-      </div>
-
-      <!-- Uploaded grid -->
-      @if (files().length > 0) {
-        <div class="flex-1">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <h4 class="font-label-md uppercase tracking-wider text-on-surface-variant">{{ heading() }}</h4>
-              <p class="text-label-md text-on-surface-variant">Drag to reorder — or focus an image and press Ctrl/Cmd + arrow keys</p>
-            </div>
-            <button (click)="clearAll()" class="text-primary font-label-md hover:underline">Clear all</button>
+        <div class="flex items-center justify-between gap-3 mb-3">
+          <div>
+            <h2 class="text-headline-md text-on-surface">{{ heading() }}</h2>
+            <p class="text-label-md text-on-surface-variant">Drag to reorder — or focus an image and press Ctrl/Cmd + arrow keys</p>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            @for (f of files(); track f.key; let i = $index) {
-              <div [appReorderItem]="i" appReorderAxis="grid" [appReorderColumns]="columns()"
-                   [appReorderTotal]="files().length" (appReorder)="onReorder($event)" tabindex="0"
-                   [attr.aria-label]="f.name"
-                   class="group bg-surface-container-lowest border rounded-lg p-3 flex flex-col gap-3 hover:shadow-sm transition-all cursor-grab active:cursor-grabbing"
-                   [class.border-outline-variant]="!f.error" [class.border-error]="f.error">
-                <div class="aspect-video bg-surface-container-low rounded-md overflow-hidden relative flex items-center justify-center">
-                  @if (!f.error) {
-                    <img class="w-full h-full object-cover pointer-events-none" draggable="false"
-                         [src]="thumb(f.path)" [alt]="f.name" />
-                  } @else {
-                    <span class="material-symbols-outlined text-error icon-xl">broken_image</span>
-                  }
-                  <button (click)="remove(i)" [attr.aria-label]="'Remove ' + f.name" title="Remove" class="absolute top-2 right-2 w-8 h-8 bg-surface/80 backdrop-blur rounded flex items-center justify-center text-error hover:bg-error hover:text-white transition-colors shadow-sm">
-                    <span class="material-symbols-outlined icon-sm">delete</span>
-                  </button>
-                  @if (metaOf(f)) {
-                    <div class="absolute bottom-2 left-2 px-2 py-1 bg-surface/80 backdrop-blur rounded text-[10px] font-mono-sm">{{ metaOf(f) }}</div>
-                  }
-                </div>
-                <div class="flex items-center justify-between">
-                  <div class="truncate">
-                    <p class="text-body-md font-medium truncate">{{ f.name }}</p>
-                    <p class="text-label-md" [class.text-on-surface-variant]="!f.error" [class.text-error]="f.error">{{ f.error || fmtBytes(f.size) }}</p>
-                  </div>
-                  <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">drag_indicator</span>
-                </div>
+          <button (click)="clearAll()" class="px-3 py-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container text-label-md">Clear all</button>
+        </div>
+        <div class="grid grid-cols-1 @[520px]:grid-cols-2 @[760px]:grid-cols-3 gap-4">
+          @for (f of files(); track f.key; let i = $index) {
+            <div [appReorderItem]="i" appReorderAxis="grid" [appReorderColumns]="columns()"
+                 [appReorderTotal]="files().length" (appReorder)="onReorder($event)" tabindex="0"
+                 [attr.aria-label]="f.name"
+                 class="group bg-surface-container-lowest border rounded-lg p-3 flex flex-col gap-3 hover:shadow-sm transition-all cursor-grab active:cursor-grabbing"
+                 [class.border-outline-variant]="!f.error" [class.border-error]="f.error">
+              <div class="aspect-video bg-surface-container-low rounded-md overflow-hidden relative flex items-center justify-center">
+                @if (!f.error) {
+                  <img class="w-full h-full object-cover pointer-events-none" draggable="false"
+                       [src]="thumb(f.path)" [alt]="f.name" />
+                } @else {
+                  <span aria-hidden="true" class="material-symbols-outlined text-error icon-xl">broken_image</span>
+                }
+                <button (click)="remove(i)" [attr.aria-label]="'Remove ' + f.name" title="Remove" class="absolute top-2 right-2 w-8 h-8 bg-surface/80 backdrop-blur rounded flex items-center justify-center text-error hover:bg-error hover:text-on-error transition-colors shadow-sm">
+                  <span aria-hidden="true" class="material-symbols-outlined icon-sm">delete</span>
+                </button>
+                @if (metaOf(f)) {
+                  <div class="absolute bottom-2 left-2 px-2 py-1 bg-surface/80 backdrop-blur rounded text-label-md font-mono-sm">{{ metaOf(f) }}</div>
+                }
               </div>
-            }
-            <button (click)="addFiles()" class="border-2 border-dashed border-outline-variant rounded-lg flex flex-col items-center justify-center gap-2 hover:border-primary hover:bg-surface-container-low transition-all group min-h-[135px]">
-              <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">add_photo_alternate</span>
-              <span class="text-label-md text-on-surface-variant group-hover:text-primary">Add More</span>
-            </button>
-          </div>
+              <div class="flex items-center justify-between gap-2">
+                <div class="min-w-0">
+                  <p class="text-body-md font-medium truncate" [title]="f.name">{{ f.name }}</p>
+                  <p class="text-label-md truncate" [class.text-on-surface-variant]="!f.error" [class.text-error]="f.error">{{ f.error || fmtBytes(f.size) }}</p>
+                </div>
+                <span aria-hidden="true" class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">drag_indicator</span>
+              </div>
+            </div>
+          }
+          <button (click)="addFiles()" class="border-2 border-dashed border-outline-variant rounded-lg flex flex-col items-center justify-center gap-2 hover:border-primary hover:bg-surface-container-low transition-all group min-h-[135px]">
+            <span aria-hidden="true" class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">add_photo_alternate</span>
+            <span class="text-label-md text-on-surface-variant group-hover:text-primary">Add more</span>
+          </button>
         </div>
-      }
-    </div>
-
-    <!-- Settings panel -->
-    <aside class="w-80 shrink-0 bg-surface-container-low border-l border-outline-variant flex flex-col overflow-hidden">
-      <div class="p-6 border-b border-outline-variant">
-        <h3 class="text-headline-md flex items-center gap-2"><span class="material-symbols-outlined text-primary">settings</span> Export Settings</h3>
       </div>
-      <div class="flex-1 p-6 space-y-8 overflow-y-auto custom-scrollbar">
-        <!-- Page size -->
-        <div class="space-y-3">
-          <label class="text-label-md font-bold uppercase tracking-wider text-on-surface-variant">Page Size</label>
+    }
+
+    <div tool-options class="space-y-6">
+      <section class="bg-surface-container-low border border-outline-variant rounded-xl p-5 space-y-5">
+        <h2 class="text-headline-md flex items-center gap-2"><span aria-hidden="true" class="material-symbols-outlined text-primary icon-sm">settings</span> Export settings</h2>
+        <div class="space-y-2">
+          <p class="text-label-md font-bold uppercase tracking-wider text-on-surface-variant">Page size</p>
           <div class="grid gap-2">
             @for (ps of pageSizes; track ps.id) {
-              <label class="flex items-center p-3 rounded-lg border bg-surface cursor-pointer hover:border-primary transition-colors"
+              <label class="flex items-center p-2.5 rounded-lg border bg-surface cursor-pointer hover:border-primary transition-colors"
                      [class.border-primary]="pageSize() === ps.id" [class.border-outline-variant]="pageSize() !== ps.id">
                 <input type="radio" name="page-size" class="w-4 h-4 accent-primary" [checked]="pageSize() === ps.id" (change)="pageSize.set(ps.id)" />
-                <div class="ml-3">
-                  <p class="text-body-md font-medium">{{ ps.label }}</p>
-                  <p class="text-label-md text-on-surface-variant">{{ ps.hint }}</p>
-                </div>
+                <span class="ml-3">
+                  <span class="block text-body-md font-medium">{{ ps.label }}</span>
+                  <span class="block text-label-md text-on-surface-variant">{{ ps.hint }}</span>
+                </span>
               </label>
             }
           </div>
         </div>
-        <!-- Orientation -->
-        <div class="space-y-3">
-          <label class="text-label-md font-bold uppercase tracking-wider text-on-surface-variant">Orientation</label>
+        <div class="space-y-2">
+          <p class="text-label-md font-bold uppercase tracking-wider text-on-surface-variant">Orientation</p>
           <div class="flex bg-surface-container-high rounded p-1">
             @for (o of orientations; track o) {
               <button (click)="orientation.set(o)" class="flex-1 py-2 text-label-md font-medium rounded capitalize transition-colors"
@@ -100,37 +83,44 @@
             }
           </div>
         </div>
-        <!-- Margin -->
-        <div class="space-y-3">
-          <label class="text-label-md font-bold uppercase tracking-wider text-on-surface-variant">Margin</label>
-          <select class="w-full bg-surface border border-outline-variant rounded-lg p-3 text-body-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+        <div class="space-y-2">
+          <label for="img-margin" class="text-label-md font-bold uppercase tracking-wider text-on-surface-variant">Margin</label>
+          <select id="img-margin" class="w-full bg-surface border border-outline-variant rounded-lg p-2.5 text-body-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
                   [value]="margin()" (change)="margin.set(+$any($event.target).value)">
             @for (m of margins; track m.v) { <option [value]="m.v">{{ m.label }}</option> }
           </select>
         </div>
-        <!-- Quality -->
-        <div class="space-y-3">
+        <div class="space-y-2">
           <div class="flex justify-between items-center">
-            <label class="text-label-md font-bold uppercase tracking-wider text-on-surface-variant">Image Quality</label>
+            <label for="img-quality" class="text-label-md font-bold uppercase tracking-wider text-on-surface-variant">Image quality</label>
             <span class="text-label-md font-mono-sm text-primary">{{ quality() }}%</span>
           </div>
-          <input type="range" min="10" max="100" [value]="quality()" (input)="quality.set(+$any($event.target).value)"
+          <input id="img-quality" type="range" min="10" max="100" [value]="quality()" (input)="quality.set(+$any($event.target).value)"
                  class="w-full accent-primary h-2 bg-outline-variant rounded-lg appearance-none cursor-pointer" />
         </div>
-      </div>
-      <div class="p-6 bg-surface-container border-t border-outline-variant">
-        <button (click)="convert()" [disabled]="!canRun()"
-                class="btn-action w-full">
-          <span class="material-symbols-outlined icon-sm">picture_as_pdf</span> Convert to PDF
-        </button>
-        <p class="text-center text-label-md text-on-surface-variant mt-4">{{ summaryText() }}</p>
-      </div>
-    </aside>
-  </div>
+        <div class="space-y-2">
+          <label for="img-name" class="text-label-md font-bold uppercase tracking-wider text-on-surface-variant">Output name</label>
+          <div class="relative">
+            <input id="img-name" type="text" [value]="outputName()" (input)="outputName.set($any($event.target).value)"
+                   [placeholder]="suggestedName()"
+                   class="w-full px-3 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary bg-surface text-body-md pr-10" />
+            <span class="absolute right-3 top-2 text-on-surface-variant text-label-md">.pdf</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <p tool-summary>{{ summaryText() }}</p>
+    <div tool-actions>
+      <button (click)="convert()" [disabled]="!canRun()" class="btn-action">
+        <span aria-hidden="true" class="material-symbols-outlined icon-sm">picture_as_pdf</span> Convert to PDF
+      </button>
+    </div>
+  </app-tool-page>
 } @else {
   <app-process-status [stage]="runner.stage() === 'processing' ? 'processing' : runner.stage() === 'done' ? 'done' : 'error'"
     [progress]="runner.progress()" [message]="runner.message()" [result]="runner.result()" [error]="runner.error()"
     doneTitle="PDF created" icon="picture_as_pdf"
-    (reset)="reset()" (back)="runner.back()" (openFolder)="openResultFolder()" (openFile)="pdf.openPath($event)" />
+    (reset)="reset()" (back)="runner.back()" (cancel)="runner.cancel()" (openFolder)="openResultFolder()" (openFile)="pdf.openPath($event)" />
 }
 <app-drop-overlay [active]="dropActive()" label="Drop images to add them" />
