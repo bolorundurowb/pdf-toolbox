@@ -5,7 +5,7 @@ use std::path::Path;
 use lopdf::{Dictionary, Document, Object, StringFormat};
 
 use super::model::{OperationResult, OutputFile, PdfMetadata};
-use super::util::{check_file_limits, ensure_unlocked, file_size, stem, unique_path};
+use super::util::{check_file_limits, ensure_unlocked, file_size, output_path, stem, Clash};
 
 fn decode_text(bytes: &[u8]) -> String {
     if bytes.len() >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF {
@@ -89,7 +89,8 @@ pub fn get_metadata(path: &str) -> Result<PdfMetadata, String> {
     })
 }
 
-pub fn set_metadata(path: &str, meta: PdfMetadata, out_dir: &str) -> Result<OperationResult, String> {
+pub fn set_metadata(path: &str, meta: PdfMetadata, on_conflict: Option<String>, out_dir: &str) -> Result<OperationResult, String> {
+    super::cancel::reset();
     check_file_limits(Path::new(path))?;
     let mut doc = Document::load(path).map_err(|e| format!("Couldn't read this PDF: {e}"))?;
     ensure_unlocked(&doc, "This PDF")?;
@@ -130,17 +131,21 @@ pub fn set_metadata(path: &str, meta: PdfMetadata, out_dir: &str) -> Result<Oper
         catalog.remove(b"Metadata");
     }
 
-    let name = format!("{} (metadata).pdf", stem(Path::new(path)));
-    let out_path = unique_path(Path::new(out_dir), &name);
+    if super::cancel::is_cancelled() {
+        return Ok(OperationResult::stopped(Vec::new(), out_dir.to_string()));
+    }
+
+    let name = format!("{} (properties).pdf", stem(Path::new(path)));
+    let out_path = output_path(Path::new(out_dir), &name, Clash::from_option(on_conflict.as_deref()));
     doc.save(&out_path).map_err(|e| format!("Couldn't save PDF: {e}"))?;
 
-    Ok(OperationResult {
-        files: vec![OutputFile {
+    Ok(OperationResult::new(
+        vec![OutputFile {
             name: out_path.file_name().and_then(|s| s.to_str()).unwrap_or(&name).to_string(),
             path: out_path.to_string_lossy().to_string(),
             size: file_size(&out_path),
             badge: None,
         }],
-        out_dir: out_dir.to_string(),
-    })
+        out_dir.to_string(),
+    ))
 }

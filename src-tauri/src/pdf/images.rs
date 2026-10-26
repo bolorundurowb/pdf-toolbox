@@ -9,7 +9,10 @@ use lopdf::{dictionary, Dictionary, Document, Object, Stream};
 use tauri::ipc::Channel;
 
 use super::model::{ImagesOptions, OperationResult, OutputFile, Progress};
-use super::util::{check_files_limits, ensure_file_id, file_size, report, short_filename, unique_path};
+use super::util::{
+    check_files_limits, ensure_file_id, file_size, first_and_more, output_path, report, short_filename,
+    strip_pdf_ext, Clash,
+};
 
 pub fn images_to_pdf(
     paths: Vec<String>,
@@ -20,6 +23,7 @@ pub fn images_to_pdf(
     if paths.is_empty() {
         return Err("No images to convert.".to_string());
     }
+    super::cancel::reset();
     check_files_limits(&paths)?;
     let total = paths.len() as u32;
 
@@ -29,6 +33,9 @@ pub fn images_to_pdf(
     let mut page_ids: Vec<Object> = Vec::new();
 
     for (i, path) in paths.iter().enumerate() {
+        if super::cancel::is_cancelled() {
+            return Ok(OperationResult::stopped(Vec::new(), out_dir));
+        }
         report(on_progress, Progress::new(i as u32, total, format!("Adding {}", short_filename(path))))?;
 
         let img = load_image(path)?;
@@ -118,13 +125,30 @@ pub fn images_to_pdf(
     doc.compress();
     ensure_file_id(&mut doc);
 
-    let out_path = unique_path(Path::new(&out_dir), "Images.pdf");
+    if super::cancel::is_cancelled() {
+        return Ok(OperationResult::stopped(Vec::new(), out_dir));
+    }
+
+    let base = options
+        .output_name
+        .as_deref()
+        .map(str::trim)
+        .filter(|n| !n.is_empty())
+        .map(strip_pdf_ext)
+        .filter(|n| !n.is_empty())
+        .map(|n| n.to_string())
+        .unwrap_or_else(|| first_and_more(&paths));
+    let out_path = output_path(
+        Path::new(&out_dir),
+        &format!("{}.pdf", base),
+        Clash::from_option(options.on_conflict.as_deref()),
+    );
     doc.save(&out_path)
         .map_err(|e| format!("Couldn't save PDF: {e}"))?;
 
     let _ = on_progress.send(Progress::new(total, total, "Done"));
-    Ok(OperationResult {
-        files: vec![OutputFile {
+    Ok(OperationResult::new(
+        vec![OutputFile {
             name: out_path
                 .file_name()
                 .and_then(|s| s.to_str())
@@ -135,12 +159,17 @@ pub fn images_to_pdf(
             badge: None,
         }],
         out_dir,
-    })
+    ))
 }
 
 /// Decodes an image upright: phone photos are usually stored sideways with an
 /// EXIF orientation tag, which `image::open` ignores — they came out rotated.
+/// HEIC/HEIF files go through `heif-oxide`, which has already applied the
+/// container's rotation, so the EXIF pass must be skipped for them.
 fn load_image(path: &str) -> Result<DynamicImage, String> {
+    if super::heic::is_heif(path) {
+        return super::heic::decode(path);
+    }
     let err = |e: &dyn std::fmt::Display| format!("Couldn't read {}: {e}", short_filename(path));
     let mut decoder = ImageReader::open(Path::new(path))
         .and_then(|r| r.with_guessed_format())

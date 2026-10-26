@@ -9,7 +9,7 @@ use lopdf::{Dictionary, Document, Object, ObjectId};
 use tauri::ipc::Channel;
 
 use super::model::{CompressEstimate, CompressOptions, OperationResult, OutputFile, Progress};
-use super::util::{check_files_limits, file_size, report, stem, unique_path};
+use super::util::{check_files_limits, file_size, output_path, report, stem, Clash};
 
 struct Profile {
     /// `None` means no downscaling — the image is re-encoded at its original size.
@@ -179,11 +179,16 @@ pub fn compress_pdfs(
     if paths.is_empty() {
         return Err("No PDFs to compress.".to_string());
     }
+    super::cancel::reset();
     check_files_limits(&paths)?;
     let total = paths.len() as u32;
     let mut files = Vec::new();
+    let clash = Clash::from_option(options.on_conflict.as_deref());
 
     for (i, path) in paths.iter().enumerate() {
+        if super::cancel::is_cancelled() {
+            return Ok(OperationResult::stopped(files, out_dir));
+        }
         let name = format!("{} (compressed).pdf", stem(Path::new(path)));
         report(on_progress, Progress::new(i as u32, total, format!("Compressing {name}")))?;
 
@@ -199,7 +204,7 @@ pub fn compress_pdfs(
         }
         doc.compress();
 
-        let out_path = unique_path(Path::new(&out_dir), &name);
+        let out_path = output_path(Path::new(&out_dir), &name, clash);
         doc.save(&out_path).map_err(|e| format!("Couldn't save {name}: {e}"))?;
 
         let out_size = file_size(&out_path);
@@ -220,7 +225,7 @@ pub fn compress_pdfs(
     }
 
     let _ = on_progress.send(Progress::new(total, total, "Done"));
-    Ok(OperationResult { files, out_dir })
+    Ok(OperationResult::new(files, out_dir))
 }
 
 /// How many of the largest images are actually re-encoded when estimating.

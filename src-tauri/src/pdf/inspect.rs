@@ -7,7 +7,7 @@ use super::model::FileInfo;
 use super::util::file_size;
 
 const IMAGE_EXTS: &[&str] = &[
-    "jpg", "jpeg", "png", "gif", "bmp", "tiff", "tif", "webp",
+    "jpg", "jpeg", "png", "gif", "bmp", "tiff", "tif", "webp", "heic", "heif",
 ];
 
 pub fn inspect_files(paths: Vec<String>) -> Vec<FileInfo> {
@@ -65,12 +65,17 @@ fn inspect_pdf(path_str: &str) -> FileInfo {
 
 fn inspect_image(path_str: &str, _ext: &str) -> FileInfo {
     let mut info = base(path_str, "image");
-    match upright_dimensions(path_str) {
-        Some((w, h)) => {
+    let dimensions = if super::heic::is_heif(path_str) {
+        super::heic::dimensions(path_str)
+    } else {
+        upright_dimensions(path_str).ok_or_else(|| "Unsupported or unreadable image".to_string())
+    };
+    match dimensions {
+        Ok((w, h)) => {
             info.width = Some(w);
             info.height = Some(h);
         }
-        None => info.error = Some("Unsupported or unreadable image".to_string()),
+        Err(message) => info.error = Some(message),
     }
     info
 }
@@ -80,6 +85,12 @@ fn inspect_image(path_str: &str, _ext: &str) -> FileInfo {
 fn upright_dimensions(path_str: &str) -> Option<(u32, u32)> {
     use image::metadata::Orientation;
     use image::ImageDecoder;
+
+    // `heif-oxide` applies the container's rotation and returns display-ready
+    // dimensions, so the EXIF pass below must not run for these files.
+    if super::heic::is_heif(path_str) {
+        return super::heic::dimensions(path_str).ok();
+    }
 
     let mut decoder = image::ImageReader::open(Path::new(path_str))
         .ok()?

@@ -45,6 +45,90 @@ pub fn stem(path: &Path) -> String {
         .to_string()
 }
 
+/// "Scan" for one file, "Scan and 3 more" for several. Used for the names the
+/// Rust side generates when the user leaves the name field empty.
+pub fn first_and_more(paths: &[String]) -> String {
+    let first = paths
+        .first()
+        .map(|p| stem(Path::new(p)))
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "Document".to_string());
+    match paths.len() {
+        0 | 1 => first,
+        n => format!("{first} and {} more", n - 1),
+    }
+}
+
+/// Collapses page numbers into the shortest range text: `1-5, 8, 11-13`.
+pub fn pages_label(pages: &[u32]) -> String {
+    let mut sorted: Vec<u32> = pages.to_vec();
+    sorted.sort_unstable();
+    sorted.dedup();
+    if sorted.is_empty() {
+        return String::new();
+    }
+    let mut parts = Vec::new();
+    let (mut start, mut prev) = (sorted[0], sorted[0]);
+    for &n in &sorted[1..] {
+        if n == prev + 1 {
+            prev = n;
+            continue;
+        }
+        parts.push(if start == prev { start.to_string() } else { format!("{start}-{prev}") });
+        start = n;
+        prev = n;
+    }
+    parts.push(if start == prev { start.to_string() } else { format!("{start}-{prev}") });
+    parts.join(", ")
+}
+
+/// Expands inclusive ranges into a sorted, de-duplicated page list.
+pub fn ranges_to_pages(ranges: &[(u32, u32)]) -> Vec<u32> {
+    let mut pages = Vec::new();
+    for &(a, b) in ranges {
+        pages.extend(a..=b);
+    }
+    pages.sort_unstable();
+    pages.dedup();
+    pages
+}
+
+/// Strips a trailing `.pdf` regardless of case (`Report.PDF` → `Report`).
+pub fn strip_pdf_ext(name: &str) -> &str {
+    if name.len() >= 4 && name.is_char_boundary(name.len() - 4) && name[name.len() - 4..].eq_ignore_ascii_case(".pdf") {
+        &name[..name.len() - 4]
+    } else {
+        name
+    }
+}
+
+/// How an output name collision is resolved.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Clash {
+    KeepBoth,
+    Overwrite,
+}
+
+impl Clash {
+    /// The UI resolves "ask" before a job starts, so only the two concrete
+    /// choices arrive here. Anything unrecognised falls back to today's safe
+    /// behaviour: keep both files.
+    pub fn from_option(value: Option<&str>) -> Self {
+        match value.map(str::trim) {
+            Some("overwrite") => Clash::Overwrite,
+            _ => Clash::KeepBoth,
+        }
+    }
+}
+
+/// Picks the output path for `file_name`, honouring the user's clash choice.
+pub fn output_path(dir: &Path, file_name: &str, clash: Clash) -> PathBuf {
+    if clash == Clash::Overwrite {
+        return dir.join(sanitize_file_name(file_name));
+    }
+    unique_path(dir, file_name)
+}
+
 /// Strips anything that would let a user-supplied output name escape the output
 /// folder or upset the filesystem. Output names come straight from a text box, and
 /// `Path::join` happily resolves `../` — or replaces the whole path if handed
@@ -337,5 +421,36 @@ mod tests {
     #[test]
     fn short_filename_fallback() {
         assert_eq!(short_filename("just_a_name"), "just_a_name");
+    }
+
+    // ---- generated names ----
+
+    #[test]
+    fn first_and_more_names() {
+        assert_eq!(first_and_more(&[]), "Document");
+        assert_eq!(first_and_more(&["C:\\Scan.PDF".to_string()]), "Scan");
+        assert_eq!(
+            first_and_more(&["a/Report.pdf".to_string(), "b/Notes.pdf".to_string(), "c/More.pdf".to_string()]),
+            "Report and 2 more"
+        );
+    }
+
+    #[test]
+    fn page_labels_collapse_ranges() {
+        assert_eq!(pages_label(&[1, 2, 3, 5, 8, 9]), "1-3, 5, 8-9");
+        assert_eq!(pages_label(&[7]), "7");
+        assert_eq!(pages_label(&[]), "");
+    }
+
+    #[test]
+    fn ranges_expand_in_order() {
+        assert_eq!(ranges_to_pages(&[(3, 5), (1, 2)]), vec![1, 2, 3, 4, 5]);
+    }
+
+    #[test]
+    fn clash_defaults_to_keeping_both() {
+        assert_eq!(Clash::from_option(None), Clash::KeepBoth);
+        assert_eq!(Clash::from_option(Some("ask")), Clash::KeepBoth);
+        assert_eq!(Clash::from_option(Some("overwrite")), Clash::Overwrite);
     }
 }

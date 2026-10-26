@@ -9,8 +9,9 @@ use tauri::ipc::Channel;
 
 use super::model::{MergeOptions, OperationResult, OutputFile, Progress};
 use super::util::{
-    check_files_limits, ensure_file_id, ensure_unlocked, file_size, flatten_inherited_attributes, report, short_filename,
-    unique_path,
+    check_files_limits, ensure_file_id, ensure_unlocked, file_size, first_and_more,
+    flatten_inherited_attributes, output_path, parse_ranges, ranges_to_pages, report, short_filename,
+    strip_pdf_ext, Clash,
 };
 
 fn type_of(object: &Object) -> Option<String> {
@@ -31,6 +32,7 @@ pub fn merge_pdfs(
     if paths.is_empty() {
         return Err("No PDFs to merge.".to_string());
     }
+    super::cancel::reset();
     check_files_limits(&paths)?;
     let total = paths.len() as u32;
     report(on_progress, Progress::new(0, total, "Reading PDFs…"))?;
@@ -41,6 +43,9 @@ pub fn merge_pdfs(
     let mut merged = Document::with_version("1.5");
 
     for (i, path) in paths.iter().enumerate() {
+        if super::cancel::is_cancelled() {
+            return Ok(OperationResult::stopped(Vec::new(), out_dir));
+        }
         let mut doc = Document::load(path)
             .map_err(|e| format!("Couldn't read {}: {e}", short_filename(path)))?;
         ensure_unlocked(&doc, &short_filename(path))?;
@@ -50,17 +55,24 @@ pub fn merge_pdfs(
         doc.renumber_objects_with(max_id);
         max_id = doc.max_id + 1;
 
-        documents_pages.extend(
-            doc.get_pages()
-                .into_values()
-                .map(|object_id| {
-                    (
-                        object_id,
-                        doc.get_object(object_id).unwrap().to_owned(),
-                    )
-                })
-                .collect::<BTreeMap<ObjectId, Object>>(),
-        );
+        let page_map = doc.get_pages();
+        let page_count = page_map.len() as u32;
+        let chosen: Vec<u32> = match options.page_ranges.get(i).map(|s| s.trim()).filter(|s| !s.is_empty()) {
+            Some(text) => ranges_to_pages(&parse_ranges(text, page_count)),
+            None => page_map.keys().copied().collect(),
+        };
+        if chosen.is_empty() {
+            return Err(format!("No pages selected from {}.", short_filename(path)));
+        }
+
+        for (page_no, object_id) in page_map {
+            if !chosen.contains(&page_no) {
+                continue;
+            }
+            if let Ok(object) = doc.get_object(object_id) {
+                documents_pages.insert(object_id, object.clone());
+            }
+        }
         documents_objects.extend(doc.objects);
 
         report(on_progress, Progress::new(
@@ -138,22 +150,32 @@ pub fn merge_pdfs(
 
     merged.trailer.set("Root", catalog_object.0);
     merged.max_id = merged.objects.len() as u32;
+    // Removing page ranges leaves the unselected pages' content and images
+    // unreachable; dropping them keeps a ranged merge close to its true size.
+    merged.prune_objects();
     merged.renumber_objects();
     merged.compress();
     ensure_file_id(&mut merged);
 
+    if super::cancel::is_cancelled() {
+        return Ok(OperationResult::stopped(Vec::new(), out_dir));
+    }
+
     let base = options
         .output_name
         .as_deref()
-        .map(|n| n.trim())
+        .map(str::trim)
         .filter(|n| !n.is_empty())
-        .unwrap_or("Merged document");
-    let file_name = if base.to_lowercase().ends_with(".pdf") {
-        base.to_string()
-    } else {
-        format!("{base}.pdf")
-    };
-    let out_path = unique_path(Path::new(&out_dir), &file_name);
+        .map(strip_pdf_ext)
+        .filter(|n| !n.is_empty())
+        .map(|n| n.to_string())
+        .unwrap_or_else(|| format!("{} (merged)", first_and_more(&paths)));
+    let file_name = format!("{base}.pdf");
+    let out_path = output_path(
+        Path::new(&out_dir),
+        &file_name,
+        Clash::from_option(options.on_conflict.as_deref()),
+    );
     merged
         .save(&out_path)
         .map_err(|e| format!("Couldn't save merged PDF: {e}"))?;
@@ -165,8 +187,8 @@ pub fn merge_pdfs(
 
     let _ = on_progress.send(Progress::new(total, total, "Done"));
 
-    Ok(OperationResult {
-        files: vec![OutputFile {
+    Ok(OperationResult::new(
+        vec![OutputFile {
             name: out_path
                 .file_name()
                 .and_then(|s| s.to_str())
@@ -177,5 +199,5 @@ pub fn merge_pdfs(
             badge: None,
         }],
         out_dir,
-    })
+    ))
 }
