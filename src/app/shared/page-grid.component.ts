@@ -39,15 +39,25 @@ export class PageGridComponent {
   readonly remove = output<number>();
   readonly duplicate = output<number>();
   readonly toggle = output<number>();
+  readonly preview = output<number>();
 
   protected onTileClick(index: number): void {
     if (this.mode() === 'select') this.toggle.emit(index);
   }
 
+  protected onTileDblClick(index: number): void {
+    this.preview.emit(index);
+  }
+
   protected onTileKey(event: KeyboardEvent, index: number): void {
-    if (this.mode() !== 'select') return;
-    if (event.key !== 'Enter' && event.key !== ' ') return;
+    if (this.mode() === 'select') {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      this.toggle.emit(index);
+      return;
+    }
+    if (event.key !== 'Enter') return;
     event.preventDefault();
-    this.toggle.emit(index);
+    this.preview.emit(index);
   }
 }

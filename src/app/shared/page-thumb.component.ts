@@ -22,12 +22,12 @@ import { PdfRenderService } from '../core/pdf-render.service';
              [style.transform]="'rotate(' + rotate() + 'deg)'" />
       } @else if (failed()) {
         <div class="text-center text-on-surface-variant">
-          <span class="material-symbols-outlined icon-lg">broken_image</span>
-          <div class="text-[10px] font-mono-sm mt-1">p{{ page() }}</div>
+          <span aria-hidden="true" class="material-symbols-outlined icon-lg">broken_image</span>
+          <div class="text-label-md font-mono-sm mt-1">p{{ page() }}</div>
         </div>
       } @else {
         <div class="w-full h-full bg-surface-container animate-pulse grid place-items-center">
-          <span class="text-[10px] font-mono-sm text-on-surface-variant">p{{ page() }}</span>
+          <span class="text-label-md font-mono-sm text-on-surface-variant">p{{ page() }}</span>
         </div>
       }
     </div>
