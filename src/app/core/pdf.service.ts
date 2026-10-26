@@ -4,16 +4,15 @@ import {open} from '@tauri-apps/plugin-dialog';
 import {documentDir, join} from '@tauri-apps/api/path';
 import {mkdir, exists, writeFile, writeTextFile} from '@tauri-apps/plugin-fs';
 import {openPath, openUrl, revealItemInDir} from '@tauri-apps/plugin-opener';
+import {listen, UnlistenFn} from '@tauri-apps/api/event';
 import {
     CompressEstimate, CompressOptions, ImagesOptions, InputFile, MergeOptions, OperationResult,
-    OutputFile, PdfMetadata, ProgressPayload, RecentFile, SecurityOptions, SplitOptions,
+    OrganizeOptions, OutputFile, PdfMetadata, ProgressPayload, RecentFile, SecurityOptions, SplitOptions,
     PageOp, UpdateInfo,
 } from './models';
 
-// Must match src-tauri/src/pdf/inspect.rs IMAGE_EXTS. HEIC/HEIF are left out on
-// purpose: the backend can't decode them, so offering them only led to files
-// that silently disappeared from the list.
-const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp'];
+// Must match src-tauri/src/pdf/inspect.rs IMAGE_EXTS.
+const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'heic', 'heif'];
 
 @Injectable({providedIn: 'root'})
 export class PdfService {
@@ -24,6 +23,19 @@ export class PdfService {
 
     async pickImages(multiple = true): Promise<string[]> {
         const sel = await open({multiple, directory: false, filters: [{name: 'Images', extensions: IMAGE_EXTS}]});
+        return this.toArray(sel);
+    }
+
+    async pickAny(multiple = true): Promise<string[]> {
+        const sel = await open({
+            multiple,
+            directory: false,
+            filters: [
+                {name: 'PDFs and images', extensions: ['pdf', ...IMAGE_EXTS]},
+                {name: 'PDF', extensions: ['pdf']},
+                {name: 'Images', extensions: IMAGE_EXTS},
+            ],
+        });
         return this.toArray(sel);
     }
 
@@ -65,24 +77,31 @@ export class PdfService {
         return invoke<OperationResult>('encrypt_pdfs', {paths, options, outDir, onProgress: this.channel(onProgress)});
     }
 
-    decryptPdfs(paths: string[], password: string, outDir: string, onProgress: (p: ProgressPayload) => void) {
-        return invoke<OperationResult>('decrypt_pdfs', {paths, password, outDir, onProgress: this.channel(onProgress)});
+    decryptPdfs(paths: string[], password: string, onConflict: string | undefined, outDir: string, onProgress: (p: ProgressPayload) => void) {
+        return invoke<OperationResult>('decrypt_pdfs', {paths, password, onConflict, outDir, onProgress: this.channel(onProgress)});
     }
 
     getMetadata(path: string): Promise<PdfMetadata> {
         return invoke<PdfMetadata>('get_metadata', {path});
     }
 
-    setMetadata(path: string, metadata: PdfMetadata, outDir: string): Promise<OperationResult> {
-        return invoke<OperationResult>('set_metadata', {path, metadata, outDir});
+    setMetadata(path: string, metadata: PdfMetadata, onConflict: string | undefined, outDir: string): Promise<OperationResult> {
+        return invoke<OperationResult>('set_metadata', {path, metadata, onConflict, outDir});
     }
 
     /**
      * Writes bytes produced in the frontend (pdf.js renders text and images
-     * locally) into the output folder, never overwriting an existing file.
+     * locally) into the output folder.
      */
-    async writeOutput(outDir: string, name: string, data: Uint8Array | string): Promise<OutputFile> {
-        const path = await this.uniqueOutputPath(outDir, name);
+    async writeOutput(
+        outDir: string,
+        name: string,
+        data: Uint8Array | string,
+        onConflict: 'keep' | 'overwrite' = 'keep',
+    ): Promise<OutputFile> {
+        const path = onConflict === 'overwrite'
+            ? await join(outDir, sanitizeFileName(name))
+            : await this.uniqueOutputPath(outDir, name);
         if (typeof data === 'string') {
             await writeTextFile(path, data);
         } else {
@@ -114,12 +133,27 @@ export class PdfService {
         }
     }
 
-    organizePdf(path: string, pages: PageOp[], outDir: string, onProgress: (p: ProgressPayload) => void) {
-        return invoke<OperationResult>('organize_pdf', {path, pages, outDir, onProgress: this.channel(onProgress)});
+    organizePdf(path: string, pages: PageOp[], options: OrganizeOptions, outDir: string, onProgress: (p: ProgressPayload) => void) {
+        return invoke<OperationResult>('organize_pdf', {path, pages, options, outDir, onProgress: this.channel(onProgress)});
     }
 
-    recentOutputs(): Promise<RecentFile[]> {
-        return invoke<RecentFile[]>('recent_outputs', {});
+    async recentOutputs(dir: string): Promise<RecentFile[]> {
+        return invoke<RecentFile[]>('recent_outputs', {dir});
+    }
+
+    /** Stops a running job between files, parts or pages. */
+    cancelJob(): Promise<void> {
+        return invoke<void>('cancel_job');
+    }
+
+    /** PDF paths the app was launched with (file associations). */
+    launchFiles(): Promise<string[]> {
+        return invoke<string[]>('launch_files');
+    }
+
+    /** A PDF opened while the app is running, delivered by single-instance. */
+    listenForOpenFiles(cb: (paths: string[]) => void): Promise<UnlistenFn> {
+        return listen<string[]>('open-file', (event) => cb(event.payload));
     }
 
     appVersion(): Promise<string> {

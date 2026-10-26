@@ -69,4 +69,4 @@ export function useFileDrop({ accept, onDrop, enabled = () => true }: FileDropOp
 }
 
 export const PDF_FILE = /\.pdf$/i;
-export const IMAGE_FILE = /\.(jpe?g|png|gif|bmp|tiff?|webp)$/i;
+export const IMAGE_FILE = /\.(jpe?g|png|gif|bmp|tiff?|webp|heic|heif)$/i;

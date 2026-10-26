@@ -7,6 +7,14 @@ import { PdfTextItem } from './pdf-render.service';
  * characters, while staying honest about what a text-only conversion can do.
  */
 
+export interface TextBlock {
+  text: string;
+  /** A short line clearly larger than the page's body text. */
+  heading: boolean;
+  /** 1 for a large title, 2 for a smaller section heading. */
+  level: 1 | 2;
+}
+
 interface Line {
   y: number; // baseline, PDF space (larger = higher on the page)
   size: number; // approximate font size in points
@@ -15,7 +23,7 @@ interface Line {
   ends: number[];
 }
 
-export function pageToParagraphs(items: PdfTextItem[]): string[] {
+export function pageToParagraphs(items: PdfTextItem[]): TextBlock[] {
   if (items.length === 0) return [];
 
   const sorted = [...items].sort((a, b) => b.y - a.y || a.x - b.x);
@@ -56,18 +64,35 @@ export function pageToParagraphs(items: PdfTextItem[]): string[] {
     if (trimmed) lineTexts.push({ text: trimmed, y: line.y, size: line.size });
   }
 
-  const paragraphs: string[] = [];
+  // The page's body size is the median line size; headings stand out from it.
+  const bodySize = median(lineTexts.map((line) => line.size)) || 0;
+  const blocks: TextBlock[] = [];
   let current: string[] = [];
   let prevY: number | null = null;
   let prevSize = 0;
 
   const flush = (): void => {
     const joined = current.join(' ').trim();
-    if (joined) paragraphs.push(joined);
+    if (joined) blocks.push({ text: joined, heading: false, level: 2 });
     current = [];
   };
 
   for (const line of lineTexts) {
+    const heading = bodySize > 0
+      && line.text.length <= 80
+      && line.size >= bodySize * 1.25;
+    if (heading) {
+      flush();
+      blocks.push({
+        text: line.text,
+        heading: true,
+        level: line.size >= bodySize * 1.6 ? 1 : 2,
+      });
+      prevY = line.y;
+      prevSize = line.size;
+      continue;
+    }
+
     if (prevY == null) {
       current.push(line.text);
     } else {
@@ -81,5 +106,12 @@ export function pageToParagraphs(items: PdfTextItem[]): string[] {
   }
   flush();
 
-  return paragraphs;
+  return blocks;
+}
+
+function median(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 }
