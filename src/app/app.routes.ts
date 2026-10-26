@@ -40,5 +40,9 @@ export const routes: Routes = [
     path: 'convert',
     loadComponent: () => import('./pages/convert/convert.component').then((m) => m.ConvertComponent),
   },
+  {
+    path: 'settings',
+    loadComponent: () => import('./pages/settings/settings.component').then((m) => m.SettingsComponent),
+  },
   { path: '**', redirectTo: 'dashboard' },
 ];

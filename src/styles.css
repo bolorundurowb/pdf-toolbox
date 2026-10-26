@@ -59,11 +59,49 @@
 }
 
 @layer components {
-    /* Primary call to action on each tool page */
+    /* Primary call to action on each tool page. Red is reserved for errors. */
     .btn-action {
-        @apply bg-secondary text-on-secondary rounded-xl font-bold py-2.5 px-4 flex items-center justify-center gap-2
-            shadow-lg shadow-secondary/20 hover:opacity-90 active:scale-95 transition-all
+        @apply bg-primary text-on-primary rounded-xl font-bold py-2.5 px-4 flex items-center justify-center gap-2
+            shadow-lg shadow-primary/20 active:scale-95 transition-all
             disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:active:scale-100;
+    }
+
+    /* Neutral document icon used for PDFs everywhere. */
+    .file-icon {
+        @apply bg-surface-container text-on-surface-variant border border-outline-variant rounded flex items-center justify-center;
+    }
+
+    /* Neutral informational call-out, in the app's teal rather than error red. */
+    .info-box {
+        @apply bg-primary/5 border border-primary/20 rounded-xl p-4 flex gap-3 text-on-surface;
+    }
+}
+
+/* One visible focus treatment for every interactive element. */
+button:focus-visible,
+a[href]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible {
+    outline: 2px solid rgb(var(--primary));
+    outline-offset: 2px;
+}
+
+/* Respect the OS setting for people who ask for less motion. */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .animate-fade-in {
+        animation: none;
     }
 }
 
@@ -279,9 +317,9 @@ main > :not(router-outlet) {
     --text-main: 26 28 28;
     --text-muted: 96 102 102;
     --surface-tint: 0 106 102;
-    --primary: 5 122 117;
+    --primary: 0 106 102;
     --on-primary: 255 255 255;
-    --primary-container: 5 122 117;
+    --primary-container: 0 106 102;
     --on-primary-container: 171 255 248;
     --inverse-primary: 123 214 207;
     --secondary: 229 9 20;
@@ -315,7 +353,7 @@ main > :not(router-outlet) {
 }
 
 @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
         color-scheme: dark;
         --surface: 14 20 19;
         --surface-dim: 11 16 15;
@@ -371,6 +409,65 @@ main > :not(router-outlet) {
         --surface-variant: 49 57 55;
         --nav-active-bg: 35 43 41;
     }
+}
+
+/* Explicit dark choice from Settings. The same tokens as the OS-dark block,
+   so switching between System and Dark is seamless. */
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface: 14 20 19;
+    --surface-dim: 11 16 15;
+    --surface-bright: 52 59 57;
+    --surface-canvas: 11 16 15;
+    --surface-sidebar: 21 27 26;
+    --surface-container-lowest: 22 29 27;
+    --surface-container-low: 30 37 35;
+    --surface-container: 35 43 41;
+    --surface-container-high: 42 50 47;
+    --surface-container-highest: 49 57 55;
+    --on-surface: 226 232 230;
+    --on-surface-variant: 170 179 177;
+    --inverse-surface: 226 232 230;
+    --inverse-on-surface: 27 34 33;
+    --outline: 137 147 144;
+    --outline-variant: 58 67 65;
+    --border-subtle: 51 59 57;
+    --text-main: 230 236 233;
+    --text-muted: 170 179 177;
+    --surface-tint: 123 214 207;
+    --primary: 95 212 204;
+    --on-primary: 0 32 30;
+    --primary-container: 0 80 76;
+    --on-primary-container: 151 242 236;
+    --inverse-primary: 5 122 117;
+    --secondary: 255 90 82;
+    --on-secondary: 255 255 255;
+    --secondary-container: 192 0 9;
+    --on-secondary-container: 255 251 255;
+    --tertiary: 255 181 152;
+    --on-tertiary: 82 33 0;
+    --tertiary-container: 102 53 21;
+    --on-tertiary-container: 255 219 206;
+    --error: 255 180 171;
+    --on-error: 105 0 5;
+    --error-container: 147 0 10;
+    --on-error-container: 255 218 214;
+    --primary-fixed: 151 242 236;
+    --primary-fixed-dim: 123 214 207;
+    --on-primary-fixed: 0 32 30;
+    --on-primary-fixed-variant: 0 80 76;
+    --secondary-fixed: 255 218 213;
+    --secondary-fixed-dim: 255 180 170;
+    --on-secondary-fixed: 65 0 1;
+    --on-secondary-fixed-variant: 147 0 7;
+    --tertiary-fixed: 255 219 206;
+    --tertiary-fixed-dim: 255 181 152;
+    --on-tertiary-fixed: 55 14 0;
+    --on-tertiary-fixed-variant: 255 181 152;
+    --background: 11 16 15;
+    --on-background: 226 232 230;
+    --surface-variant: 49 57 55;
+    --nav-active-bg: 35 43 41;
 }
 
 /* Avoid a white flash before the shell paints */
