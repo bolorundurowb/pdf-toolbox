@@ -38,8 +38,19 @@ pub fn parse_ranges(text: &str, max: u32) -> Vec<(u32, u32)> {
     out
 }
 
+/// Final path segment. Both separators count: `Path` only treats `\` as a
+/// separator on Windows, so a Windows path string would otherwise keep its
+/// directories when these helpers run on Linux.
+fn last_component(path: &str) -> &str {
+    path.rsplit(['/', '\\'])
+        .find(|segment| !segment.is_empty())
+        .unwrap_or(path)
+}
+
 pub fn stem(path: &Path) -> String {
-    path.file_stem()
+    let name = path.to_str().map(last_component).unwrap_or("");
+    Path::new(name)
+        .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("Document")
         .to_string()
@@ -193,11 +204,7 @@ pub fn report(channel: &Channel<Progress>, progress: Progress) -> Result<(), Str
 /// Extract the file name from a path string, falling back to the whole string
 /// if the path has no filename component.
 pub fn short_filename(path: &str) -> String {
-    Path::new(path)
-        .file_name()
-        .and_then(|s| s.to_str())
-        .unwrap_or(path)
-        .to_string()
+    last_component(path).to_string()
 }
 
 /// Page attributes a page may inherit from an ancestor `/Pages` node (PDF 32000 §7.7.3.4).
