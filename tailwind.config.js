@@ -83,9 +83,9 @@ module.exports = {
         'body-lg': ['14px', { lineHeight: '20px', fontWeight: '400' }],
         'body-md': ['13px', { lineHeight: '18px', fontWeight: '400' }],
         'body-sm': ['12px', { lineHeight: '16px', fontWeight: '400' }],
-        'label-md': ['11px', { lineHeight: '15px', letterSpacing: '0.01em', fontWeight: '500' }],
-        'label-caps': ['10px', { lineHeight: '14px', letterSpacing: '0.05em', fontWeight: '700' }],
-        'mono-sm': ['11px', { lineHeight: '15px', fontWeight: '400' }],
+        'label-md': ['12px', { lineHeight: '16px', letterSpacing: '0.01em', fontWeight: '500' }],
+        'label-caps': ['12px', { lineHeight: '16px', letterSpacing: '0.05em', fontWeight: '700' }],
+        'mono-sm': ['12px', { lineHeight: '16px', fontWeight: '400' }],
       },
       spacing: {
         'sidebar-width': '17.5rem',
@@ -112,5 +112,5 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  plugins: [require('@tailwindcss/container-queries')],
 };

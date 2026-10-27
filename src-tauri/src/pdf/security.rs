@@ -11,7 +11,7 @@ use rand::RngExt;
 use tauri::ipc::Channel;
 
 use super::model::{OperationResult, OutputFile, Progress, SecurityOptions};
-use super::util::{check_files_limits, ensure_file_id, file_size, report, stem, unique_path};
+use super::util::{check_files_limits, ensure_file_id, file_size, output_path, report, stem, Clash};
 
 fn default_permissions() -> Permissions {
     Permissions::PRINTABLE
@@ -95,6 +95,7 @@ pub fn encrypt_pdfs(
     if options.user_password.is_empty() {
         return Err("Enter a user password.".to_string());
     }
+    super::cancel::reset();
     check_files_limits(&paths)?;
 
     // Reusing the user password as the owner password would let anyone who can
@@ -110,11 +111,15 @@ pub fn encrypt_pdfs(
 
     let total = paths.len() as u32;
     let mut files = Vec::new();
+    let clash = Clash::from_option(options.on_conflict.as_deref());
 
     for (i, path) in paths.iter().enumerate() {
+        if super::cancel::is_cancelled() {
+            return Ok(OperationResult::stopped(files, out_dir));
+        }
         let name = format!("{} (protected).pdf", stem(Path::new(path)));
         report(on_progress, Progress::new(i as u32, total, format!("Protecting {name}")))?;
-        let out_path = unique_path(Path::new(&out_dir), &name);
+        let out_path = output_path(Path::new(&out_dir), &name, clash);
 
         let mut doc = Document::load(path).map_err(|e| map_crypto_error(e, &name))?;
         if doc.is_encrypted() {
@@ -130,27 +135,33 @@ pub fn encrypt_pdfs(
     }
 
     let _ = on_progress.send(Progress::new(total, total, "Done"));
-    Ok(OperationResult { files, out_dir })
+    Ok(OperationResult::new(files, out_dir))
 }
 
 pub fn decrypt_pdfs(
     paths: Vec<String>,
     password: String,
+    on_conflict: Option<String>,
     out_dir: String,
     on_progress: &Channel<Progress>,
 ) -> Result<OperationResult, String> {
     if paths.is_empty() {
         return Err("No PDFs to unlock.".to_string());
     }
+    super::cancel::reset();
     check_files_limits(&paths)?;
 
     let total = paths.len() as u32;
     let mut files = Vec::new();
+    let clash = Clash::from_option(on_conflict.as_deref());
 
     for (i, path) in paths.iter().enumerate() {
+        if super::cancel::is_cancelled() {
+            return Ok(OperationResult::stopped(files, out_dir));
+        }
         let name = format!("{} (unlocked).pdf", stem(Path::new(path)));
         report(on_progress, Progress::new(i as u32, total, format!("Unlocking {name}")))?;
-        let out_path = unique_path(Path::new(&out_dir), &name);
+        let out_path = output_path(Path::new(&out_dir), &name, clash);
 
         let mut doc = Document::load_with_options(path, LoadOptions::with_password(&password))
             .map_err(|e| map_crypto_error(e, &name))?;
@@ -164,7 +175,7 @@ pub fn decrypt_pdfs(
     }
 
     let _ = on_progress.send(Progress::new(total, total, "Done"));
-    Ok(OperationResult { files, out_dir })
+    Ok(OperationResult::new(files, out_dir))
 }
 
 fn out_file(out_path: &Path, name: &str) -> OutputFile {

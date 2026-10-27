@@ -30,6 +30,11 @@
                 "output": "assets"
               },
               {
+                "glob": "theme-init.js",
+                "input": "src",
+                "output": "."
+              },
+              {
                 "glob": "pdf.worker.min.mjs",
                 "input": "node_modules/pdfjs-dist/build",
                 "output": "assets/pdfjs"

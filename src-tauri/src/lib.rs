@@ -3,11 +3,11 @@
 mod pdf;
 
 use tauri::ipc::Channel;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 use pdf::model::{
-    CompressEstimate, CompressOptions, FileInfo, ImagesOptions, MergeOptions, OperationResult, PageOp, PdfMetadata,
-    Progress, RecentFile, SecurityOptions, SplitOptions,
+    CompressEstimate, CompressOptions, FileInfo, ImagesOptions, MergeOptions, OperationResult, OrganizeOptions,
+    PageOp, PdfMetadata, Progress, RecentFile, SecurityOptions, SplitOptions,
 };
 use pdf::update::UpdateInfo;
 
@@ -89,12 +89,15 @@ async fn encrypt_pdfs(
 async fn decrypt_pdfs(
     paths: Vec<String>,
     password: String,
+    on_conflict: Option<String>,
     out_dir: String,
     on_progress: Channel<Progress>,
 ) -> Result<OperationResult, String> {
-    tauri::async_runtime::spawn_blocking(move || pdf::security::decrypt_pdfs(paths, password, out_dir, &on_progress))
-        .await
-        .map_err(|e| format!("Task failed: {e}"))?
+    tauri::async_runtime::spawn_blocking(move || {
+        pdf::security::decrypt_pdfs(paths, password, on_conflict, out_dir, &on_progress)
+    })
+    .await
+    .map_err(|e| format!("Task failed: {e}"))?
 }
 
 #[tauri::command]
@@ -105,20 +108,21 @@ async fn get_metadata(path: String) -> Result<PdfMetadata, String> {
 }
 
 #[tauri::command]
-async fn set_metadata(path: String, metadata: PdfMetadata, out_dir: String) -> Result<OperationResult, String> {
-    tauri::async_runtime::spawn_blocking(move || pdf::metadata::set_metadata(&path, metadata, &out_dir))
-        .await
-        .map_err(|e| format!("Task failed: {e}"))?
+async fn set_metadata(
+    path: String,
+    metadata: PdfMetadata,
+    on_conflict: Option<String>,
+    out_dir: String,
+) -> Result<OperationResult, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        pdf::metadata::set_metadata(&path, metadata, on_conflict, &out_dir)
+    })
+    .await
+    .map_err(|e| format!("Task failed: {e}"))?
 }
 
 #[tauri::command]
-async fn recent_outputs(app: tauri::AppHandle) -> Result<Vec<RecentFile>, String> {
-    let dir = app
-        .path()
-        .document_dir()
-        .map(|d| d.join("PDF Toolbox"))
-        .map_err(|e| format!("Couldn't resolve the documents folder: {e}"))?;
-    let dir = dir.to_string_lossy().to_string();
+async fn recent_outputs(dir: String) -> Result<Vec<RecentFile>, String> {
     Ok(tauri::async_runtime::spawn_blocking(move || pdf::recents::recent_outputs(&dir))
         .await
         .map_err(|e| format!("Task failed: {e}"))?)
@@ -128,12 +132,33 @@ async fn recent_outputs(app: tauri::AppHandle) -> Result<Vec<RecentFile>, String
 async fn organize_pdf(
     path: String,
     pages: Vec<PageOp>,
+    options: OrganizeOptions,
     out_dir: String,
     on_progress: Channel<Progress>,
 ) -> Result<OperationResult, String> {
-    tauri::async_runtime::spawn_blocking(move || pdf::organize::organize_pdf(path, pages, out_dir, &on_progress))
-        .await
-        .map_err(|e| format!("Task failed: {e}"))?
+    tauri::async_runtime::spawn_blocking(move || {
+        pdf::organize::organize_pdf(path, pages, options, out_dir, &on_progress)
+    })
+    .await
+    .map_err(|e| format!("Task failed: {e}"))?
+}
+
+#[tauri::command]
+fn cancel_job() {
+    pdf::cancel::request();
+}
+
+/// PDF paths passed on the command line when the app was launched (for file
+/// associations). The dashboard shows these with an "open in a tool" choice.
+#[tauri::command]
+fn launch_files() -> Vec<String> {
+    pdf_paths(std::env::args())
+}
+
+fn pdf_paths(args: impl IntoIterator<Item = String>) -> Vec<String> {
+    args.into_iter()
+        .filter(|arg| !arg.starts_with('-') && arg.to_lowercase().ends_with(".pdf"))
+        .collect()
 }
 
 #[tauri::command]
@@ -150,7 +175,19 @@ async fn check_update() -> Result<UpdateInfo, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            // A second launch (e.g. double-clicking a PDF) is handed to this
+            // window instead of starting another copy of the app.
+            let files = pdf_paths(argv);
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.set_focus();
+                if !files.is_empty() {
+                    let _ = window.emit("open-file", files);
+                }
+            }
+        }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -169,7 +206,54 @@ pub fn run() {
             organize_pdf,
             app_version,
             check_update,
+            cancel_job,
+            launch_files,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building the Tauri application");
+
+    app.run(|app_handle, event| {
+        // macOS and iOS deliver "open with" files as run events rather than
+        // command-line arguments.
+        #[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
+        if let tauri::RunEvent::Opened { urls } = event {
+            let files: Vec<String> = urls
+                .into_iter()
+                .filter_map(|url| url.to_file_path().ok())
+                .map(|path| path.to_string_lossy().to_string())
+                .filter(|path| path.to_lowercase().ends_with(".pdf"))
+                .collect();
+            if let Some(window) = app_handle.get_webview_window("main") {
+                let _ = window.set_focus();
+                if !files.is_empty() {
+                    let _ = window.emit("open-file", files);
+                }
+            }
+        }
+
+        #[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "android")))]
+        {
+            let _ = (app_handle, event);
+        }
+    });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::pdf_paths;
+
+    #[test]
+    fn launch_args_keep_only_pdf_files() {
+        let args = vec![
+            "pdf-toolbox".to_string(),
+            "--flag".to_string(),
+            "C:\\Docs\\Report.PDF".to_string(),
+            "notes.txt".to_string(),
+            "/home/me/scan.pdf".to_string(),
+        ];
+        assert_eq!(
+            pdf_paths(args),
+            vec!["C:\\Docs\\Report.PDF".to_string(), "/home/me/scan.pdf".to_string()]
+        );
+    }
 }

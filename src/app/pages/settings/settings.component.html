@@ -1,0 +1,120 @@
+<app-tool-page title="Settings" description="Choose where files are saved, how name clashes are handled, and how the app looks and updates.">
+  <div class="grid grid-cols-1 @[760px]:grid-cols-2 gap-6 pb-6">
+    <!-- Output folder -->
+    <section class="bg-surface border border-outline-variant rounded-xl p-6 space-y-4">
+      <div class="flex items-center gap-3">
+        <span aria-hidden="true" class="material-symbols-outlined text-primary icon-sm">folder</span>
+        <h2 class="text-headline-md">Output folder</h2>
+      </div>
+      <div class="bg-surface-container-low border border-outline-variant rounded-lg px-4 py-3">
+        <p class="text-label-md text-on-surface-variant">Saving to</p>
+        <p class="text-body-md text-on-surface font-mono-sm break-all">{{ resolvedFolder() || 'Documents/PDF Toolbox' }}</p>
+      </div>
+      @if (settings.missingSavedFolder()) {
+        <p class="text-label-md text-error">The saved folder no longer exists, so the default is in use.</p>
+      }
+      <div class="flex flex-wrap gap-2">
+        <button (click)="chooseFolder()" class="px-4 py-2 rounded-lg border border-outline-variant hover:bg-surface-container transition-colors text-body-md">
+          Change folder
+        </button>
+        @if (settings.settings().outputFolder) {
+          <button (click)="resetFolder()" class="px-4 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors text-body-md">
+            Use default
+          </button>
+        }
+      </div>
+      <label class="flex items-start gap-3 cursor-pointer pt-2">
+        <input type="checkbox" [checked]="settings.settings().askEveryTime" (change)="toggleAskEveryTime($any($event.target).checked)"
+               class="mt-0.5 rounded accent-primary h-5 w-5 border-outline-variant" />
+        <span>
+          <span class="block text-body-md text-on-surface">Ask every time</span>
+          <span class="block text-label-md text-on-surface-variant">Choose a folder at the start of each run; the choice is not remembered.</span>
+        </span>
+      </label>
+    </section>
+
+    <!-- Name clashes -->
+    <section class="bg-surface border border-outline-variant rounded-xl p-6 space-y-4">
+      <div class="flex items-center gap-3">
+        <span aria-hidden="true" class="material-symbols-outlined text-primary icon-sm">content_copy</span>
+        <h2 class="text-headline-md">When a file name already exists</h2>
+      </div>
+      <div class="space-y-2">
+        @for (option of conflicts; track option.id) {
+          <label class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
+                 [class.border-primary]="settings.settings().onConflict === option.id"
+                 [class.bg-primary/5]="settings.settings().onConflict === option.id"
+                 [class.border-outline-variant]="settings.settings().onConflict !== option.id">
+            <input type="radio" name="conflict" class="mt-0.5 accent-primary h-4 w-4"
+                   [checked]="settings.settings().onConflict === option.id"
+                   (change)="setConflict(option.id)" />
+            <span>
+              <span class="block text-body-md text-on-surface">{{ option.label }}</span>
+              <span class="block text-label-md text-on-surface-variant">{{ option.hint }}</span>
+            </span>
+          </label>
+        }
+      </div>
+    </section>
+
+    <!-- Appearance -->
+    <section class="bg-surface border border-outline-variant rounded-xl p-6 space-y-4">
+      <div class="flex items-center gap-3">
+        <span aria-hidden="true" class="material-symbols-outlined text-primary icon-sm">palette</span>
+        <h2 class="text-headline-md">Theme</h2>
+      </div>
+      <div class="grid grid-cols-3 gap-2">
+        @for (theme of themes; track theme.id) {
+          <button type="button" (click)="setTheme(theme.id)"
+                  class="flex flex-col items-center gap-2 px-3 py-4 rounded-lg border transition-colors"
+                  [class.border-primary]="settings.settings().theme === theme.id"
+                  [class.bg-primary/5]="settings.settings().theme === theme.id"
+                  [class.text-primary]="settings.settings().theme === theme.id"
+                  [class.border-outline-variant]="settings.settings().theme !== theme.id"
+                  [attr.aria-pressed]="settings.settings().theme === theme.id">
+            <span aria-hidden="true" class="material-symbols-outlined icon-md">{{ theme.icon }}</span>
+            <span class="text-body-md">{{ theme.label }}</span>
+          </button>
+        }
+      </div>
+      <p class="text-label-md text-on-surface-variant">System follows your computer's light or dark setting.</p>
+    </section>
+
+    <!-- Updates -->
+    <section class="bg-surface border border-outline-variant rounded-xl p-6 space-y-4">
+      <div class="flex items-center gap-3">
+        <span aria-hidden="true" class="material-symbols-outlined text-primary icon-sm">system_update</span>
+        <h2 class="text-headline-md">Updates</h2>
+      </div>
+      <p class="text-body-md text-on-surface">Current version <span class="font-mono-sm">{{ updates.version() || '—' }}</span></p>
+      <label class="flex items-start gap-3 cursor-pointer">
+        <input type="checkbox" [checked]="settings.settings().autoUpdate" (change)="toggleAutoUpdate($any($event.target).checked)"
+               class="mt-0.5 rounded accent-primary h-5 w-5 border-outline-variant" />
+        <span>
+          <span class="block text-body-md text-on-surface">Check automatically</span>
+          <span class="block text-label-md text-on-surface-variant">At start-up and every six hours. Off still allows a manual check.</span>
+        </span>
+      </label>
+      <div class="flex flex-wrap items-center gap-3" aria-live="polite">
+        <button (click)="checkNow()" [disabled]="updates.checking()"
+                class="px-4 py-2 rounded-lg border border-outline-variant hover:bg-surface-container transition-colors text-body-md disabled:opacity-50">
+          {{ updates.checking() ? 'Checking…' : 'Check now' }}
+        </button>
+        @if (!updates.checking() && updates.info(); as info) {
+          @if (info.updateAvailable) {
+            <span class="text-label-md text-primary font-semibold">v{{ bare(info.latestVersion) }} is available</span>
+            <button (click)="updates.openReleases()" class="text-label-md font-semibold text-primary underline">Download</button>
+          } @else {
+            <span class="text-label-md text-on-surface-variant">You're up to date.</span>
+          }
+        }
+      </div>
+    </section>
+  </div>
+
+  <p class="text-body-md text-on-surface-variant bg-surface-container-low border border-outline-variant rounded-xl p-4">
+    Files are processed on this computer; the update check is the only request the app makes, to GitHub, and only when a check runs.
+  </p>
+
+  <p tool-summary>Settings save automatically.</p>
+</app-tool-page>

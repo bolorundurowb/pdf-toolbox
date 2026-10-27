@@ -1,125 +1,161 @@
 @if (runner.stage() === 'idle') {
-  <div class="p-padding-lg max-w-5xl mx-auto w-full space-y-container-gap overflow-y-auto custom-scrollbar h-full flex flex-col">
-    <div>
-      <h2 class="text-display text-on-surface">Extract</h2>
-      <p class="text-body-lg text-on-surface-variant mt-1">Pick the pages you want, then pull them out as text, images or a new PDF.</p>
-    </div>
-
+  <app-tool-page title="Extract" description="Pick pages, save them as text, images or a new PDF — or divide the document.">
     @if (!file()) {
-      <div (click)="choose()" class="border-2 border-dashed border-outline-variant rounded-xl p-12 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
-        <span class="material-symbols-outlined text-primary icon-3xl">upload_file</span>
-        <p class="text-headline-md mt-3">Choose a PDF</p>
-        <p class="text-on-surface-variant text-body-md">Drop a PDF here, or click to browse your files</p>
-      </div>
+      <app-file-drop-zone
+        title="Choose a PDF"
+        hint="Drop a PDF here, or choose a file from your computer"
+        icon="upload_file"
+        [active]="dropActive()"
+        (choose)="choose()"
+      />
     } @else {
-      <div class="bg-surface border border-outline-variant rounded-xl flex-1 flex flex-col overflow-hidden">
-        <div class="px-6 py-4 border-b border-outline-variant flex items-center gap-3">
-          <div class="w-9 h-11 bg-error/10 border border-error/20 rounded flex items-center justify-center text-error"><span class="material-symbols-outlined icon-sm">picture_as_pdf</span></div>
-          <div class="flex-1 min-w-0">
-            <p class="font-medium truncate">{{ file()!.name }}</p>
+      <div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+        <div class="px-4 py-3 border-b border-outline-variant flex flex-wrap items-center gap-3">
+          <div class="w-9 h-11 shrink-0 file-icon"><span aria-hidden="true" class="material-symbols-outlined icon-sm">description</span></div>
+          <div class="flex-1 min-w-[10rem]">
+            <p class="font-medium truncate" [title]="file()!.name">{{ file()!.name }}</p>
             <p class="text-label-md text-on-surface-variant font-mono-sm">{{ totalPages() }} pages · {{ fmtBytes(file()!.size) }} · {{ summary() }}</p>
           </div>
-          <button (click)="clearFile()" class="px-4 py-2 border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-container transition-all flex items-center gap-2"><span class="material-symbols-outlined icon-sm">change_circle</span> Change</button>
+          <button (click)="clearFile()" class="px-3 py-1.5 border border-outline-variant rounded-lg text-on-surface-variant hover:bg-surface-container transition-all flex items-center gap-1.5 text-label-md">
+            <span aria-hidden="true" class="material-symbols-outlined icon-sm">change_circle</span> Change
+          </button>
         </div>
 
-        <!-- Output mode -->
-        <div class="p-6 pb-0 grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <!-- Output modes -->
+        <div class="p-4 grid grid-cols-2 @[600px]:grid-cols-3 @[900px]:grid-cols-4 gap-2">
           @for (m of modes; track m.id) {
             <button type="button" (click)="setMode(m.id)"
-                    class="p-4 border rounded-xl text-left hover:border-primary transition-all"
-                    [class.border-primary]="mode() === m.id" [class.bg-surface-container-low]="mode() === m.id"
-                    [class.border-outline-variant]="mode() !== m.id">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="material-symbols-outlined icon-sm" [class.text-primary]="mode() === m.id" [class.text-on-surface-variant]="mode() !== m.id">{{ m.icon }}</span>
-                <h4 class="font-bold text-on-surface">{{ m.label }}</h4>
-              </div>
-              <p class="text-label-md text-on-surface-variant">{{ m.hint }}</p>
+                    class="p-3 border rounded-lg text-left hover:border-primary transition-all"
+                    [class.border-primary]="mode() === m.id" [class.bg-primary/5]="mode() === m.id"
+                    [class.border-outline-variant]="mode() !== m.id"
+                    [attr.aria-pressed]="mode() === m.id">
+              <span class="flex items-center gap-2 mb-1">
+                <span aria-hidden="true" class="material-symbols-outlined icon-sm" [class.text-primary]="mode() === m.id" [class.text-on-surface-variant]="mode() !== m.id">{{ m.icon }}</span>
+                <span class="font-bold text-on-surface text-body-md">{{ m.label }}</span>
+              </span>
+              <span class="block text-label-md text-on-surface-variant">{{ m.hint }}</span>
             </button>
           }
         </div>
 
-        <!-- Mode options -->
+        @if (usesSelection()) {
+          <div class="px-4 pb-3 flex flex-wrap items-center gap-2">
+            <span class="text-label-md text-on-surface-variant uppercase tracking-wider mr-1">Pages</span>
+            <button (click)="selectAll(true)" class="px-2.5 py-1.5 border border-outline-variant rounded-lg text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">All</button>
+            <button (click)="selectAll(false)" class="px-2.5 py-1.5 border border-outline-variant rounded-lg text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">None</button>
+            <button (click)="selectParity(1)" class="px-2.5 py-1.5 border border-outline-variant rounded-lg text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">Odd</button>
+            <button (click)="selectParity(0)" class="px-2.5 py-1.5 border border-outline-variant rounded-lg text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">Even</button>
+            <button (click)="invertSelection()" class="px-2.5 py-1.5 border border-outline-variant rounded-lg text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">Invert</button>
+            <input type="text" [value]="rangeText()" (input)="onRangeInput($event)" placeholder="1-5, 8, 11-13"
+                   aria-label="Page ranges"
+                   class="flex-1 min-w-[10rem] px-3 py-1.5 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono-sm bg-surface text-body-md" />
+          </div>
+
+          <div class="p-4 border-t border-outline-variant">
+            @if (totalPages() === 0) {
+              <p class="text-on-surface-variant text-body-md text-center py-8">This PDF has no pages.</p>
+            } @else {
+              <app-page-grid [path]="file()!.path" [pages]="tiles()" mode="select" [columns]="6"
+                             (toggle)="toggle($event)" (preview)="previewIndex.set($event)" />
+            }
+          </div>
+        } @else if (mode() === 'bookmarks') {
+          <div class="p-4 border-t border-outline-variant">
+            <div class="info-box">
+              <span aria-hidden="true" class="material-symbols-outlined text-primary icon-sm">bookmarks</span>
+              <p class="text-body-md">Each top-level bookmark starts a new PDF. A document without an outline is reported instead of writing files.</p>
+            </div>
+          </div>
+        } @else if (mode() === 'ranges') {
+          <div class="p-4 border-t border-outline-variant">
+            <div class="info-box">
+              <span aria-hidden="true" class="material-symbols-outlined text-primary icon-sm">call_split</span>
+              <p class="text-body-md">Each range becomes its own PDF. The ranges are entered in the options column.</p>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <div tool-options class="space-y-6">
+      <section class="bg-surface-container-low border border-outline-variant rounded-xl p-5 space-y-4">
+        <h2 class="text-headline-md">Output</h2>
+
         @if (mode() === 'images') {
-          <div class="px-6 pt-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div class="space-y-2">
-              <label class="font-label-md text-on-surface-variant block uppercase tracking-wider">Format</label>
-              <div class="flex bg-surface-container-high rounded p-1">
-                <button (click)="imageFormat.set('png')" class="flex-1 py-2 text-label-md font-medium rounded transition-colors"
-                        [class.bg-surface]="imageFormat()==='png'" [class.text-primary]="imageFormat()==='png'" [class.shadow-sm]="imageFormat()==='png'" [class.text-on-surface-variant]="imageFormat()!=='png'">PNG</button>
-                <button (click)="imageFormat.set('jpg')" class="flex-1 py-2 text-label-md font-medium rounded transition-colors"
-                        [class.bg-surface]="imageFormat()==='jpg'" [class.text-primary]="imageFormat()==='jpg'" [class.shadow-sm]="imageFormat()==='jpg'" [class.text-on-surface-variant]="imageFormat()!=='jpg'">JPG</button>
-              </div>
+          <div class="space-y-2">
+            <span class="block text-label-md uppercase tracking-wider text-on-surface-variant">Format</span>
+            <div class="flex bg-surface-container-high rounded p-1">
+              <button (click)="imageFormat.set('png')" class="flex-1 py-2 text-label-md font-medium rounded transition-colors"
+                      [class.bg-surface]="imageFormat()==='png'" [class.text-primary]="imageFormat()==='png'" [class.shadow-sm]="imageFormat()==='png'" [class.text-on-surface-variant]="imageFormat()!=='png'">PNG</button>
+              <button (click)="imageFormat.set('jpg')" class="flex-1 py-2 text-label-md font-medium rounded transition-colors"
+                      [class.bg-surface]="imageFormat()==='jpg'" [class.text-primary]="imageFormat()==='jpg'" [class.shadow-sm]="imageFormat()==='jpg'" [class.text-on-surface-variant]="imageFormat()!=='jpg'">JPG</button>
             </div>
-            <div class="space-y-2">
-              <label class="font-label-md text-on-surface-variant block uppercase tracking-wider">Resolution (DPI)</label>
-              <select [value]="dpi()" (change)="dpi.set(+$any($event.target).value)" class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
-                @for (d of dpis; track d) { <option [value]="d">{{ d }} DPI</option> }
-              </select>
-            </div>
+          </div>
+          <div class="space-y-2">
+            <label for="ext-dpi" class="block text-label-md uppercase tracking-wider text-on-surface-variant">Resolution</label>
+            <select id="ext-dpi" [value]="dpi()" (change)="dpi.set(+$any($event.target).value)" class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-body-md">
+              @for (d of dpis; track d) { <option [value]="d">{{ d }} DPI</option> }
+            </select>
           </div>
         }
 
         @if (mode() === 'size') {
-          <div class="px-6 pt-6 max-w-xs space-y-2">
-            <label class="font-label-md text-on-surface-variant block uppercase tracking-wider">Max size per file (MB)</label>
-            <input type="number" min="1" [value]="maxSizeMb()" (input)="maxSizeMb.set(+$any($event.target).value || 1)"
-                   class="w-full px-4 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono-sm bg-surface" />
+          <div class="space-y-2">
+            <label for="ext-size" class="block text-label-md uppercase tracking-wider text-on-surface-variant">Max size per file (MB)</label>
+            <input id="ext-size" type="number" min="1" [value]="maxSizeMb()" (input)="maxSizeMb.set(+$any($event.target).value || 1)"
+                   class="w-full px-3 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono-sm bg-surface text-body-md" />
             <p class="text-label-md text-on-surface-variant">Pages are divided evenly, so part sizes are approximate.</p>
           </div>
         }
 
-        <div class="px-6 pt-6 max-w-sm space-y-2">
-          <label class="font-label-md text-on-surface-variant block uppercase tracking-wider">Output filename</label>
-          <input type="text" [value]="outputName()" (input)="outputName.set($any($event.target).value)"
-                 [placeholder]="file()!.name.replace('.pdf', '')"
-                 class="w-full px-4 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary bg-surface" />
-        </div>
-
-        <!-- Page picker -->
-        @if (usesSelection()) {
-          <div class="px-6 pt-6 flex flex-wrap items-center gap-2">
-            <span class="font-label-md text-on-surface-variant uppercase tracking-wider mr-1">Pages</span>
-            <button (click)="selectAll(true)" class="px-3 py-1.5 border border-outline-variant rounded-lg text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">All</button>
-            <button (click)="selectAll(false)" class="px-3 py-1.5 border border-outline-variant rounded-lg text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">None</button>
-            <button (click)="selectParity(1)" class="px-3 py-1.5 border border-outline-variant rounded-lg text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">Odd</button>
-            <button (click)="selectParity(0)" class="px-3 py-1.5 border border-outline-variant rounded-lg text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">Even</button>
-            <button (click)="invertSelection()" class="px-3 py-1.5 border border-outline-variant rounded-lg text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">Invert</button>
-            <input type="text" [value]="rangeText()" (input)="onRangeInput($event)" placeholder="1-5, 8, 11-13"
-                   aria-label="Page ranges"
-                   class="flex-1 min-w-[12rem] px-4 py-1.5 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono-sm bg-surface" />
-          </div>
-
-          <div class="p-6 overflow-y-auto custom-scrollbar flex-1">
-            @if (totalPages() === 0) {
-              <p class="text-on-surface-variant text-body-md text-center py-10">This PDF has no pages.</p>
-            } @else {
-              <app-page-grid [path]="file()!.path" [pages]="tiles()" mode="select" [columns]="6" (toggle)="toggle($event)" />
-            }
-          </div>
-        } @else {
-          <div class="p-6 flex-1">
-            <div class="bg-secondary-container/20 border border-secondary-container rounded-xl p-6 flex gap-4">
-              <span class="material-symbols-outlined text-secondary">info</span>
-              <p class="text-on-secondary-container/80 text-body-md">Splitting by size uses the whole document, so individual page selection doesn’t apply here.</p>
-            </div>
+        @if (mode() === 'every') {
+          <div class="space-y-2">
+            <label for="ext-every" class="block text-label-md uppercase tracking-wider text-on-surface-variant">Pages per file</label>
+            <input id="ext-every" type="number" min="1" [value]="everyPages()" (input)="everyPages.set(+$any($event.target).value || 1)"
+                   class="w-full px-3 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono-sm bg-surface text-body-md" />
           </div>
         }
 
-        <div class="px-6 py-4 bg-surface-container-low border-t border-outline-variant flex justify-between items-center">
-          <span class="text-label-md text-on-surface-variant">{{ summary() }}</span>
-          <button (click)="run()" [disabled]="!canRun()"
-                  class="btn-action">
-            <span class="material-symbols-outlined icon-sm">{{ mode() === 'text' ? 'article' : mode() === 'images' ? 'image' : mode() === 'pdf' ? 'picture_as_pdf' : 'call_split' }}</span>
-            {{ runLabel() }}
-          </button>
+        @if (mode() === 'ranges') {
+          <div class="space-y-2">
+            <label for="ext-ranges" class="block text-label-md uppercase tracking-wider text-on-surface-variant">Ranges</label>
+            <input id="ext-ranges" type="text" [value]="splitRangeText()" (input)="splitRangeText.set($any($event.target).value)"
+                   placeholder="1-3, 8, 12-20"
+                   class="w-full px-3 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono-sm bg-surface text-body-md" />
+            <p class="text-label-md text-on-surface-variant">Each range becomes a separate PDF.</p>
+          </div>
+        }
+
+        <div class="space-y-2 border-t border-outline-variant pt-3">
+          <label for="ext-name" class="block text-label-md uppercase tracking-wider text-on-surface-variant">Output name</label>
+          <input id="ext-name" type="text" [value]="outputName()" (input)="outputName.set($any($event.target).value)"
+                 [placeholder]="file() ? stemOf(file()!.name) : 'Document'"
+                 class="w-full px-3 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary bg-surface text-body-md" />
+          @if (file(); as f) {
+            <p class="text-label-md text-on-surface-variant">The operation is added to the name, for example “{{ stemOf(f.name) }} (text).txt”.</p>
+          }
         </div>
-      </div>
-    }
-  </div>
+      </section>
+    </div>
+
+    <p tool-summary>{{ summary() }}</p>
+    <div tool-actions>
+      <button (click)="run()" [disabled]="!canRun()" class="btn-action">
+        <span aria-hidden="true" class="material-symbols-outlined icon-sm">{{ mode() === 'text' ? 'article' : mode() === 'images' ? 'image' : mode() === 'pdf' ? 'picture_as_pdf' : 'call_split' }}</span>
+        {{ runLabel() }}
+      </button>
+    </div>
+  </app-tool-page>
 } @else {
   <app-process-status [stage]="runner.stage() === 'processing' ? 'processing' : runner.stage() === 'done' ? 'done' : 'error'"
     [progress]="runner.progress()" [message]="runner.message()" [result]="runner.result()" [error]="runner.error()"
     [doneTitle]="doneTitle()" icon="article"
-    (reset)="reset()" (back)="runner.back()" (openFolder)="openResultFolder()" (openFile)="pdf.openPath($event)" />
+    (reset)="reset()" (back)="runner.back()" (cancel)="runner.cancel()" (openFolder)="openResultFolder()" (openFile)="pdf.openPath($event)" />
 }
 <app-drop-overlay [active]="dropActive()" label="Drop a PDF to open it" />
+
+@if (file() && previewIndex() !== null) {
+  <app-page-preview [path]="file()!.path"
+                    [page]="tiles()[previewIndex()!].source"
+                    (close)="previewIndex.set(null)" />
+}

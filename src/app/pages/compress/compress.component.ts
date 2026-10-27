@@ -1,12 +1,19 @@
-import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { PdfService } from '../../core/pdf.service';
 import { createRunner } from '../../core/runner';
 import { CompressEstimate, CompressLevel, InputFile } from '../../core/models';
 import { formatBytes, pluralize } from '../../core/format';
+import { SettingsService } from '../../core/settings.service';
+import { RecentInputsService } from '../../core/recent-inputs.service';
 import { ProcessStatusComponent } from '../../shared/process-status.component';
 import { DropOverlayComponent } from '../../shared/drop-overlay.component';
+import { ToolPageComponent } from '../../shared/tool-page.component';
+import { FileDropZoneComponent } from '../../shared/file-drop-zone.component';
 import { PDF_FILE, useFileDrop } from '../../core/file-drop';
 import { mergeUnique } from '../../core/files';
+import { useShortcuts } from '../../core/shortcuts';
+import { stemOf } from '../../core/output-names';
+import { routerPaths } from '../../core/tool-nav';
 
 interface LevelInfo {
   id: CompressLevel;
@@ -29,12 +36,12 @@ const ESTIMATE_DEBOUNCE_MS = 350;
 
 @Component({
   selector: 'app-compress',
-  imports: [ProcessStatusComponent, DropOverlayComponent],
+  imports: [ProcessStatusComponent, DropOverlayComponent, ToolPageComponent, FileDropZoneComponent],
   templateUrl: './compress.component.html',
 })
-export class CompressComponent {
+export class CompressComponent implements OnInit {
   readonly fmtBytes = formatBytes;
-  readonly runner = createRunner();
+  readonly runner = createRunner(() => void this.pdf.cancelJob());
 
   readonly files = signal<InputFile[]>([]);
   readonly grayscale = signal(false);
@@ -81,11 +88,15 @@ export class CompressComponent {
 
   readonly dropActive = useFileDrop({
     accept: PDF_FILE,
-    onDrop: (paths) => void this.runner.attempt(() => this.ingest(paths)),
+    onDrop: (paths) => void this.ingestFrom(paths),
     enabled: () => this.runner.stage() === 'idle',
   });
 
-  constructor(public readonly pdf: PdfService) {
+  constructor(
+    public readonly pdf: PdfService,
+    private readonly settings: SettingsService,
+    private readonly recents: RecentInputsService,
+  ) {
     // Re-estimate whenever the files, level or greyscale choice change.
     effect(() => {
       const paths = this.okFiles().map((f) => f.path);
@@ -93,6 +104,17 @@ export class CompressComponent {
       this.scheduleEstimate(paths, options);
     });
     inject(DestroyRef).onDestroy(() => clearTimeout(this.estimateTimer));
+    useShortcuts({
+      onOpen: () => void this.addFiles(),
+      onRun: () => void this.apply(),
+      enabled: () => this.runner.stage() === 'idle',
+      canRun: () => this.canRun(),
+    });
+  }
+
+  async ngOnInit(): Promise<void> {
+    const paths = routerPaths().filter((path) => PDF_FILE.test(path));
+    if (paths.length > 0) await this.ingestFrom(paths);
   }
 
   private scheduleEstimate(paths: string[], options: { level: CompressLevel; grayscale: boolean; removeMetadata: boolean }): void {
@@ -134,16 +156,26 @@ export class CompressComponent {
     await this.runner.attempt(async () => this.ingest(await this.pdf.pickPdfs(true)));
   }
 
+  private async ingestFrom(paths: string[]): Promise<void> {
+    await this.runner.attempt(() => this.ingest(paths));
+  }
+
   private async ingest(paths: string[]): Promise<void> {
     if (!paths.length) return;
     const inspected = await this.pdf.inspect(paths);
     // Compressing the same file twice in one run is never useful, and duplicate
     // paths would also collide in the `@for` track key.
-    this.files.update((c) => mergeUnique(c, inspected.filter((f) => f.kind === 'pdf')));
+    const added = mergeUnique(this.files(), inspected.filter((f) => f.kind === 'pdf'));
+    this.files.set(added);
+    this.recents.remember(inspected);
   }
 
   remove(i: number) { this.files.update((c) => c.filter((_, x) => x !== i)); }
-  clearAll() { this.files.set([]); }
+
+  clearAll() {
+    if (this.files().length > 0 && !window.confirm('Remove all files from this list?')) return;
+    this.files.set([]);
+  }
 
   summary(): string {
     return `${pluralize(this.okFiles().length, 'file')} · ${formatBytes(this.total())} · ${this.levelInfo().name}`;
@@ -151,11 +183,25 @@ export class CompressComponent {
 
   async apply(): Promise<void> {
     if (!this.canRun()) return;
-    const outDir = await this.pdf.defaultOutputDir();
+    const outDir = await this.settings.resolveOutputDir();
+    if (!outDir) return;
+    const names = this.okFiles().map((f) => `${stemOf(f.name)} (compressed).pdf`);
+    const conflict = await this.settings.resolveConflict(outDir, names);
     const paths = this.okFiles().map((f) => f.path);
-    await this.runner.run((op) => this.pdf.compressPdfs(paths, { level: this.level(), grayscale: this.grayscale(), removeMetadata: this.removeMetadata() }, outDir, op));
+    await this.runner.run((op) =>
+      this.pdf.compressPdfs(
+        paths,
+        {
+          level: this.level(),
+          grayscale: this.grayscale(),
+          removeMetadata: this.removeMetadata(),
+          onConflict: conflict,
+        },
+        outDir, op,
+      ),
+    );
   }
 
   reset() { this.runner.reset(); this.files.set([]); }
-  openResultFolder() { const r = this.runner.result(); if (r) void this.pdf.openFolder(r.outDir); }
+  openResultFolder() { const r = this.runner.result(); if (r?.outDir) void this.pdf.openFolder(r.outDir); }
 }

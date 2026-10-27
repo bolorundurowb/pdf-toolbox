@@ -3,21 +3,26 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use lopdf::{Dictionary, Document, Object};
+use lopdf::{Dictionary, Document, Object, ObjectId};
 use tauri::ipc::Channel;
 
-use super::model::{OperationResult, OutputFile, PageOp, Progress};
-use super::util::{check_file_limits, ensure_unlocked, file_size, flatten_inherited_attributes, report, stem, unique_path};
+use super::model::{OperationResult, OrganizeOptions, OutputFile, PageOp, Progress};
+use super::util::{
+    check_file_limits, ensure_unlocked, file_size, flatten_inherited_attributes, output_path, report,
+    stem, Clash,
+};
 
 pub fn organize_pdf(
     path: String,
     pages: Vec<PageOp>,
+    options: OrganizeOptions,
     out_dir: String,
     on_progress: &Channel<Progress>,
 ) -> Result<OperationResult, String> {
     if pages.is_empty() {
         return Err("Keep at least one page.".to_string());
     }
+    super::cancel::reset();
     check_file_limits(Path::new(&path))?;
     report(on_progress, Progress::new(0, 1, "Reorganizing…"))?;
 
@@ -45,6 +50,7 @@ pub fn organize_pdf(
         .collect();
 
     let mut kids: Vec<Object> = Vec::new();
+    let mut ordered: Vec<ObjectId> = Vec::new();
     let mut used: Vec<u32> = Vec::new();
 
     for op in &pages {
@@ -72,6 +78,7 @@ pub fn organize_pdf(
             }
         }
         kids.push(Object::Reference(target));
+        ordered.push(target);
     }
     if kids.is_empty() {
         return Err("No matching pages to keep.".to_string());
@@ -85,24 +92,30 @@ pub fn organize_pdf(
         }
     }
 
+    super::overlay::apply(&mut doc, &ordered, &options)?;
+
     doc.prune_objects();
     doc.renumber_objects();
     doc.compress();
 
-    let name = format!("{} (organized).pdf", stem(Path::new(&path)));
-    let out_path = unique_path(Path::new(&out_dir), &name);
+    if super::cancel::is_cancelled() {
+        return Ok(OperationResult::stopped(Vec::new(), out_dir));
+    }
+
+    let name = format!("{} (organised).pdf", stem(Path::new(&path)));
+    let out_path = output_path(Path::new(&out_dir), &name, Clash::from_option(options.on_conflict.as_deref()));
     doc.save(&out_path).map_err(|e| format!("Couldn't save PDF: {e}"))?;
 
     let _ = on_progress.send(Progress::new(1, 1, "Done"));
-    Ok(OperationResult {
-        files: vec![OutputFile {
+    Ok(OperationResult::new(
+        vec![OutputFile {
             name: out_path.file_name().and_then(|s| s.to_str()).unwrap_or(&name).to_string(),
             path: out_path.to_string_lossy().to_string(),
             size: file_size(&out_path),
             badge: None,
         }],
         out_dir,
-    })
+    ))
 }
 
 /// `/Rotate` is an inheritable attribute, so a page may get its value from an

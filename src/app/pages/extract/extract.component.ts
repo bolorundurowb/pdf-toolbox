@@ -1,64 +1,92 @@
-import { Component, OnDestroy, computed, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, signal } from '@angular/core';
 import { PdfService } from '../../core/pdf.service';
 import { PdfRenderService } from '../../core/pdf-render.service';
 import { createRunner } from '../../core/runner';
 import { ExtractImageFormat, InputFile, OperationResult, OutputFile, ProgressPayload } from '../../core/models';
 import { formatBytes, pluralize } from '../../core/format';
 import { pagesToRangeText, parseRanges, rangesToPages } from '../../core/page-ranges';
+import { SettingsService } from '../../core/settings.service';
+import { RecentInputsService } from '../../core/recent-inputs.service';
 import { ProcessStatusComponent } from '../../shared/process-status.component';
 import { DropOverlayComponent } from '../../shared/drop-overlay.component';
+import { ToolPageComponent } from '../../shared/tool-page.component';
+import { FileDropZoneComponent } from '../../shared/file-drop-zone.component';
+import { PagePreviewComponent } from '../../shared/page-preview.component';
 import { PDF_FILE, useFileDrop } from '../../core/file-drop';
 import { PageGridComponent, PageTile } from '../../shared/page-grid.component';
+import { useShortcuts } from '../../core/shortcuts';
+import { outputBase, stemOf } from '../../core/output-names';
+import { routerPaths } from '../../core/tool-nav';
 
-/** What the selected pages get turned into. */
-export type ExtractMode = 'text' | 'images' | 'pdf' | 'size';
+/** What the selected pages get turned into, or how the file is divided. */
+export type ExtractMode = 'text' | 'images' | 'pdf' | 'size' | 'every' | 'ranges' | 'bookmarks';
 
 /** Separates pages in the extracted text file, as the old Rust path did. */
 const PAGE_BREAK = '\u000C';
 
 @Component({
   selector: 'app-extract',
-  imports: [ProcessStatusComponent, PageGridComponent, DropOverlayComponent],
+  imports: [
+    ProcessStatusComponent, PageGridComponent, DropOverlayComponent,
+    ToolPageComponent, FileDropZoneComponent, PagePreviewComponent,
+  ],
   templateUrl: './extract.component.html',
 })
-export class ExtractComponent implements OnDestroy {
+export class ExtractComponent implements OnInit, OnDestroy {
   readonly fmtBytes = formatBytes;
-  readonly runner = createRunner();
+  readonly stemOf = stemOf;
+  readonly runner = createRunner(() => void this.pdf.cancelJob());
 
   readonly file = signal<InputFile | null>(null);
   readonly tiles = signal<PageTile[]>([]);
+  readonly previewIndex = signal<number | null>(null);
   readonly mode = signal<ExtractMode>('text');
   readonly imageFormat = signal<ExtractImageFormat>('png');
   readonly dpi = signal(150);
   readonly dpis = [72, 150, 300];
   readonly maxSizeMb = signal(25);
+  readonly everyPages = signal(5);
   readonly outputName = signal('');
+  /** The expression used by the "several files" mode. */
+  readonly splitRangeText = signal('1-3, 8, 12-20');
 
   readonly modes: { id: ExtractMode; label: string; hint: string; icon: string }[] = [
     { id: 'text', label: 'Text', hint: 'Save readable text to a .txt file', icon: 'article' },
     { id: 'images', label: 'Images', hint: 'Render each page to a PNG or JPG', icon: 'image' },
     { id: 'pdf', label: 'New PDF', hint: 'Keep the chosen pages as one PDF', icon: 'picture_as_pdf' },
-    { id: 'size', label: 'Split by size', hint: 'Divide the whole file into parts', icon: 'data_usage' },
+    { id: 'size', label: 'Split by size', hint: 'Divide the file into parts under a size', icon: 'data_usage' },
+    { id: 'every', label: 'Every N pages', hint: 'A new file after every N pages', icon: 'auto_awesome_motion' },
+    { id: 'ranges', label: 'Several ranges', hint: 'One file per range expression', icon: 'call_split' },
+    { id: 'bookmarks', label: 'By bookmarks', hint: 'One file per chapter in the outline', icon: 'bookmarks' },
   ];
 
-  /** Size-splitting works on the whole document, so page choice doesn't apply. */
-  readonly usesSelection = computed(() => this.mode() !== 'size');
+  /** Modes that work on the tiles the user picked. */
+  readonly usesSelection = computed(() => ['text', 'images', 'pdf'].includes(this.mode()));
   readonly totalPages = computed(() => this.tiles().length);
   readonly selectedPages = computed(() => this.tiles().filter((t) => t.selected).map((t) => t.source));
   readonly selectedCount = computed(() => this.selectedPages().length);
+  readonly extentForLabel = computed(() => pagesToRangeText(this.selectedPages()) || '—');
 
   readonly canRun = computed(() => {
     if (!this.file()) return false;
-    if (!this.usesSelection()) return this.maxSizeMb() > 0;
-    return this.selectedCount() > 0;
+    switch (this.mode()) {
+      case 'size': return this.maxSizeMb() > 0;
+      case 'every': return this.everyPages() >= 1;
+      case 'ranges': return parseRanges(this.splitRangeText(), this.totalPages()).length > 0;
+      case 'bookmarks': return true;
+      default: return this.selectedCount() > 0;
+    }
   });
 
   readonly runLabel = computed(() => {
     switch (this.mode()) {
-      case 'text': return 'Extract Text';
-      case 'images': return 'Export Images';
-      case 'pdf': return 'Save Pages as PDF';
-      default: return 'Split File';
+      case 'text': return 'Extract text';
+      case 'images': return 'Export images';
+      case 'pdf': return 'Save pages as PDF';
+      case 'size': return 'Split by size';
+      case 'every': return 'Split every N pages';
+      case 'ranges': return 'Split at ranges';
+      default: return 'Split by bookmarks';
     }
   });
 
@@ -67,7 +95,10 @@ export class ExtractComponent implements OnDestroy {
       case 'text': return 'Text extracted';
       case 'images': return 'Pages exported';
       case 'pdf': return 'Pages saved';
-      default: return 'PDF split';
+      case 'size':
+      case 'every':
+      case 'ranges':
+      case 'bookmarks': return 'PDF split';
     }
   });
 
@@ -78,13 +109,27 @@ export class ExtractComponent implements OnDestroy {
     enabled: () => this.runner.stage() === 'idle' && !this.file(),
   });
 
-  /** Reflects the current selection, and can be typed into to change it. */
+  /** Reflects the current tile selection, and can be typed into to change it. */
   readonly rangeText = signal('');
 
   constructor(
     public readonly pdf: PdfService,
     private readonly renderer: PdfRenderService,
-  ) {}
+    private readonly settings: SettingsService,
+    private readonly recents: RecentInputsService,
+  ) {
+    useShortcuts({
+      onOpen: () => { if (!this.file()) void this.choose(); },
+      onRun: () => void this.run(),
+      enabled: () => this.runner.stage() === 'idle',
+      canRun: () => this.canRun(),
+    });
+  }
+
+  async ngOnInit(): Promise<void> {
+    const [path] = routerPaths().filter((p) => PDF_FILE.test(p));
+    if (path) await this.runner.attempt(() => this.load(path));
+  }
 
   setMode(m: ExtractMode): void {
     this.mode.set(m);
@@ -111,6 +156,7 @@ export class ExtractComponent implements OnDestroy {
       Array.from({ length: n }, (_, i) => ({ key: i + 1, source: i + 1, rotate: 0, selected: true })),
     );
     this.syncRangeText();
+    this.recents.remember([f]);
   }
 
   async clearFile(): Promise<void> {
@@ -118,6 +164,7 @@ export class ExtractComponent implements OnDestroy {
     this.file.set(null);
     this.tiles.set([]);
     this.rangeText.set('');
+    this.previewIndex.set(null);
     if (previous) await this.renderer.dispose(previous.path);
   }
 
@@ -160,37 +207,87 @@ export class ExtractComponent implements OnDestroy {
   async run(): Promise<void> {
     const f = this.file();
     if (!f || !this.canRun()) return;
-    const outDir = await this.pdf.defaultOutputDir();
+    const outDir = await this.settings.resolveOutputDir();
+    if (!outDir) return;
+
+    const base = this.baseName(f);
+    const conflict = await this.settings.resolveConflict(outDir, this.expectedNames(f, base));
 
     switch (this.mode()) {
       case 'text':
-        await this.runner.run((op) => this.writeText(f, outDir, op));
+        await this.runner.run((op) => this.writeText(f, outDir, conflict, op));
         return;
       case 'images':
-        await this.runner.run((op) => this.writeImages(f, outDir, op));
+        await this.runner.run((op) => this.writeImages(f, outDir, conflict, op));
         return;
       case 'pdf':
         await this.runner.run((op) => this.pdf.splitPdf(f.path, {
           mode: 'extract', rangeText: this.rangeText(), maxSizeMb: this.maxSizeMb(),
           selectedPages: this.selectedPages(), outputName: this.outputName() || undefined,
+          onConflict: conflict,
         }, outDir, op));
         return;
       case 'size':
         await this.runner.run((op) => this.pdf.splitPdf(f.path, {
           mode: 'size', rangeText: '', maxSizeMb: this.maxSizeMb(),
-          selectedPages: [], outputName: this.outputName() || undefined,
+          selectedPages: [], outputName: this.outputName() || undefined, onConflict: conflict,
+        }, outDir, op));
+        return;
+      case 'every':
+        await this.runner.run((op) => this.pdf.splitPdf(f.path, {
+          mode: 'every', rangeText: '', maxSizeMb: this.maxSizeMb(), everyPages: this.everyPages(),
+          selectedPages: [], outputName: this.outputName() || undefined, onConflict: conflict,
+        }, outDir, op));
+        return;
+      case 'ranges':
+        await this.runner.run((op) => this.pdf.splitPdf(f.path, {
+          mode: 'ranges', rangeText: this.splitRangeText(), maxSizeMb: this.maxSizeMb(),
+          selectedPages: [], outputName: this.outputName() || undefined, onConflict: conflict,
+        }, outDir, op));
+        return;
+      case 'bookmarks':
+        await this.runner.run((op) => this.pdf.splitPdf(f.path, {
+          mode: 'bookmarks', rangeText: '', maxSizeMb: this.maxSizeMb(),
+          selectedPages: [], outputName: this.outputName() || undefined, onConflict: conflict,
         }, outDir, op));
         return;
     }
   }
 
+  /** Best-effort list of the names the backend will write, for the ask policy. */
+  private expectedNames(f: InputFile, base: string): string[] {
+    switch (this.mode()) {
+      case 'text':
+        return [`${base} (text).txt`];
+      case 'images':
+        return this.selectedPages().map((page) => `${base} (page ${page}).${this.imageFormat()}`);
+      case 'pdf':
+        return [`${base} (${this.selectedCount() === 1 ? 'page' : 'pages'} ${this.extentForLabel()}).pdf`];
+      case 'ranges':
+        return parseRanges(this.splitRangeText(), f.pages ?? 0)
+          .map(([a, b]) => `${base} (${a === b ? `page ${a}` : `pages ${a}-${b}`}).pdf`);
+      case 'every': {
+        const total = Math.ceil((f.pages ?? 0) / Math.max(1, this.everyPages()));
+        return Array.from({ length: total }, (_, i) => `${base} (part ${i + 1} of ${total}).pdf`);
+      }
+      default:
+        return [];
+    }
+  }
+
   /** Reads text page by page through pdf.js and writes a single .txt file. */
-  private async writeText(f: InputFile, outDir: string, op: (p: ProgressPayload) => void): Promise<OperationResult> {
+  private async writeText(
+    f: InputFile,
+    outDir: string,
+    conflict: 'keep' | 'overwrite',
+    op: (p: ProgressPayload) => void,
+  ): Promise<OperationResult> {
     const pages = this.selectedPages();
     const chunks: string[] = [];
     const skipped: number[] = [];
 
     for (const [i, page] of pages.entries()) {
+      if (this.runner.cancelled()) return { files: [], outDir, stopped: true };
       op({ processed: i, total: pages.length, message: `Reading page ${page}` });
       try {
         chunks.push(await this.renderer.pageText(f.path, page));
@@ -205,7 +302,7 @@ export class ExtractComponent implements OnDestroy {
 
     const text = chunks.map((c) => (c.endsWith('\n') ? c : `${c}\n`)).join(PAGE_BREAK);
     op({ processed: pages.length, total: pages.length, message: 'Writing text file…' });
-    const written = await this.pdf.writeOutput(outDir, `${this.baseName(f)}.txt`, text);
+    const written = await this.pdf.writeOutput(outDir, `${this.baseName(f)} (text).txt`, text, conflict);
 
     // Scanned, image-only PDFs have no text layer; say so rather than hand back
     // a silently empty file.
@@ -214,17 +311,23 @@ export class ExtractComponent implements OnDestroy {
   }
 
   /** Renders each selected page at the chosen DPI and writes one image per page. */
-  private async writeImages(f: InputFile, outDir: string, op: (p: ProgressPayload) => void): Promise<OperationResult> {
+  private async writeImages(
+    f: InputFile,
+    outDir: string,
+    conflict: 'keep' | 'overwrite',
+    op: (p: ProgressPayload) => void,
+  ): Promise<OperationResult> {
     const pages = this.selectedPages();
     const format = this.imageFormat();
     const files: OutputFile[] = [];
     const skipped: number[] = [];
 
     for (const [i, page] of pages.entries()) {
+      if (this.runner.cancelled()) return { files, outDir, stopped: true };
       op({ processed: i, total: pages.length, message: `Rendering page ${page}` });
       try {
         const bytes = await this.renderer.renderToBytes(f.path, page, this.dpi(), format);
-        files.push(await this.pdf.writeOutput(outDir, `${this.baseName(f)}_page_${page}.${format}`, bytes));
+        files.push(await this.pdf.writeOutput(outDir, `${this.baseName(f)} (page ${page}).${format}`, bytes, conflict));
       } catch {
         // Keep the pages that did render rather than discarding the whole run.
         skipped.push(page);
@@ -239,14 +342,17 @@ export class ExtractComponent implements OnDestroy {
   }
 
   private baseName(f: InputFile): string {
-    const custom = this.outputName().trim().replace(/\.(pdf|txt|png|jpe?g)$/i, '');
-    if (custom) return custom;
-    return f.name.replace(/\.pdf$/i, '') || 'Document';
+    return outputBase(this.outputName(), stemOf(f.name) || 'Document', /\.(pdf|txt|png|jpe?g)$/i);
   }
 
   summary(): string {
-    if (!this.usesSelection()) return 'Whole document';
-    return `${pluralize(this.selectedCount(), 'page')} of ${this.totalPages()}`;
+    switch (this.mode()) {
+      case 'size': return `Whole document · max ${this.maxSizeMb()} MB per part`;
+      case 'every': return `Whole document · a file every ${pluralize(this.everyPages(), 'page')}`;
+      case 'ranges': return this.splitRangeText() || 'Enter ranges';
+      case 'bookmarks': return 'One file per bookmark';
+      default: return `${pluralize(this.selectedCount(), 'page')} of ${this.totalPages()}`;
+    }
   }
 
   async reset(): Promise<void> {
@@ -256,7 +362,7 @@ export class ExtractComponent implements OnDestroy {
 
   openResultFolder(): void {
     const r = this.runner.result();
-    if (r) void this.pdf.openFolder(r.outDir);
+    if (r?.outDir) void this.pdf.openFolder(r.outDir);
   }
 
   ngOnDestroy(): void {

@@ -1,8 +1,11 @@
-import { Component, OnDestroy, OnInit, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { NAV_ITEMS } from './core/nav.config';
+import { Component, OnDestroy, OnInit, effect } from '@angular/core';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import type { UnlistenFn } from '@tauri-apps/api/event';
+import { NAV_GROUPS, SETTINGS_ITEM } from './core/nav.config';
 import { PdfService } from './core/pdf.service';
-import { UpdateInfo } from './core/models';
+import { OpenFilesService } from './core/open-files.service';
+import { SettingsService } from './core/settings.service';
+import { UpdateService } from './core/update.service';
 
 @Component({
   selector: 'app-root',
@@ -10,48 +13,49 @@ import { UpdateInfo } from './core/models';
   templateUrl: './app.component.html',
 })
 export class AppComponent implements OnInit, OnDestroy {
-  readonly nav = NAV_ITEMS;
-  readonly version = signal('');
-  readonly updateInfo = signal<UpdateInfo | null>(null);
-  readonly checkingUpdate = signal(false);
+  readonly navGroups = NAV_GROUPS;
+  readonly settingsItem = SETTINGS_ITEM;
 
-  private updateTimer?: ReturnType<typeof setInterval>;
+  private unlisten?: UnlistenFn;
 
-  constructor(private readonly pdf: PdfService) {}
+  constructor(
+    public readonly settings: SettingsService,
+    public readonly updates: UpdateService,
+    private readonly pdf: PdfService,
+    private readonly openFiles: OpenFilesService,
+    private readonly router: Router,
+  ) {
+    // Start or stop the six-hour update timer as the preference changes.
+    effect(() => {
+      this.settings.settings().autoUpdate;
+      this.updates.syncSchedule();
+    });
+  }
 
   async ngOnInit(): Promise<void> {
     try {
-      this.version.set(await this.pdf.appVersion());
+      this.unlisten = await this.pdf.listenForOpenFiles((paths) => {
+        // A second launch (double-clicking a PDF) belongs on the dashboard,
+        // where the user picks a tool. The signal also covers the case where
+        // the dashboard is already showing.
+        this.openFiles.show(paths);
+        void this.router.navigate(['/dashboard']);
+      });
     } catch {
-      this.version.set('');
+      // Outside the Tauri shell there is no single-instance event.
     }
-    void this.checkNow();
-    // Re-check every 6 hours.
-    this.updateTimer = setInterval(() => void this.checkNow(), 6 * 60 * 60 * 1000);
   }
 
-  async checkNow(): Promise<void> {
-    this.checkingUpdate.set(true);
-    try {
-      this.updateInfo.set(await this.pdf.checkUpdate());
-    } catch {
-      this.updateInfo.set(null);
-    } finally {
-      this.checkingUpdate.set(false);
-    }
+  ngOnDestroy(): void {
+    this.unlisten?.();
   }
 
   openReleases(): void {
-    const url = this.updateInfo()?.releaseUrl;
-    if (url) void this.pdf.openUrl(url).catch(() => undefined);
+    this.updates.openReleases();
   }
 
   /** Release tags already carry a leading `v` (`v1.2.0`); strip it so the UI doesn't show `vv1.2.0`. */
   bare(version: string | undefined): string {
     return (version ?? '').replace(/^v/i, '');
-  }
-
-  ngOnDestroy(): void {
-    if (this.updateTimer) clearInterval(this.updateTimer);
   }
 }
